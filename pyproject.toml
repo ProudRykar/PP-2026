@@ -27,6 +27,7 @@ dependencies = [
     "gutarik (>=0.1.2,<0.2.0)",
     "mkdocs (>=1.6.1,<2.0.0)",
     "mkdocs-material (>=9.7.6,<10.0.0)",
+    "boto3 (>=1.43.23,<2.0.0)",
 ]
 
 [tool.poetry]

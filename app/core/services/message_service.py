@@ -2,7 +2,7 @@ import logging
 from typing import List, Optional
 
 from app.core.domain.models.message import Message
-from app.adapters.interfaces.message_repository import MessageRepository
+from app.core.ports.message_repository import MessageRepository
 
 logger = logging.getLogger(__name__)
 

@@ -12,7 +12,7 @@ def test_message_creation():
     msg = Message(
         id="test:1",
         channel=ChannelType.TELEGRAM,
-        sender="user1",
+        sender_id="user1",
         content="hello",
         timestamp=now,
         metadata={"key": "val"},
@@ -20,7 +20,7 @@ def test_message_creation():
 
     assert msg.id == "test:1"
     assert msg.channel == ChannelType.TELEGRAM
-    assert msg.sender == "user1"
+    assert msg.sender_id == "user1"
     assert msg.content == "hello"
     assert msg.timestamp == now
     assert msg.metadata == {"key": "val"}
@@ -33,7 +33,7 @@ def test_message_with_optional_fields():
     msg = Message(
         id="test:2",
         channel=ChannelType.EMAIL,
-        sender="alice@example.com",
+        sender_id="alice@example.com",
         content="body",
         timestamp=now,
         metadata={},
@@ -50,7 +50,7 @@ def test_message_to_dict():
     msg = Message(
         id="test:3",
         channel=ChannelType.TELEGRAM,
-        sender="user1",
+        sender_id="user1",
         content="hello",
         timestamp=now,
         metadata={"k": "v"},
@@ -59,7 +59,7 @@ def test_message_to_dict():
     d = msg.to_dict()
     assert d["id"] == "test:3"
     assert d["channel"] == ChannelType.TELEGRAM
-    assert d["sender"] == "user1"
+    assert d["sender_id"] == "user1"
     assert d["content"] == "hello"
     assert d["timestamp"] == now.isoformat()
     assert d["metadata"] == {"k": "v"}
@@ -93,7 +93,7 @@ def test_message_requires_no_defaults():
 def test_message_default_optional_fields():
     now = datetime.now(timezone.utc)
     msg = Message(
-        id="x", channel="tg", sender="u", content="c", timestamp=now, metadata={}
+        id="x", channel="tg", sender_id="u", content="c", timestamp=now, metadata={}
     )
     assert msg.recipient is None
     assert msg.subject is None

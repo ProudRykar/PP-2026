@@ -6,9 +6,9 @@ from app.adapters.engines.factory import (
     TelegramEngineFactory,
     EmailEngineFactory,
 )
-from app.adapters.interfaces.db import DatabaseGateway
-from app.adapters.interfaces.message_repository import MessageRepository
-from app.adapters.interfaces.polling_service import PollingService
+from app.core.ports.db import DatabaseGateway
+from app.core.ports.message_repository import MessageRepository
+from app.core.ports.polling_service import PollingService
 from app.adapters.gateways.postgres import PostgresDatabaseGateway
 from app.adapters.repositories.postgres.repository import PostgresMessageRepository
 from app.core.services.message_service import MessageService

@@ -5,7 +5,7 @@ from typing import AsyncGenerator
 from telegram import Bot
 from telegram.ext import Application, MessageHandler, filters
 
-from app.adapters.interfaces.message_engine import MessageEngine
+from app.core.ports.message_engine import MessageEngine
 from app.core.domain.models.message import Message
 from app.core.domain.models.channel_type import ChannelType
 
@@ -63,18 +63,42 @@ class TelegramEngine(MessageEngine):
             return
 
         msg = update.message
+
+        content = msg.text or msg.caption or ""
+
+        media_type = None
+        if msg.photo:
+            media_type = "photo"
+        elif msg.document:
+            media_type = "document"
+        elif msg.video:
+            media_type = "video"
+        elif msg.audio:
+            media_type = "audio"
+        elif msg.voice:
+            media_type = "voice"
+        elif msg.sticker:
+            media_type = "sticker"
+
+        if not content and media_type:
+            content = f"[{media_type}]"
+
+        metadata: dict = {
+            "chat_id": msg.chat_id,
+            "message_id": msg.message_id,
+            "username": msg.from_user.username,
+            "first_name": msg.from_user.first_name,
+        }
+        if media_type:
+            metadata["media_type"] = media_type
+
         message = Message(
             id=f"telegram:{msg.message_id}",
             channel=self._channel_type,
-            sender=str(msg.from_user.id),
-            content=msg.text or "",
+            sender_id=str(msg.from_user.id),
+            content=content,
             timestamp=msg.date,
-            metadata={
-                "chat_id": msg.chat_id,
-                "message_id": msg.message_id,
-                "username": msg.from_user.username,
-                "first_name": msg.from_user.first_name,
-            },
+            metadata=metadata,
         )
         logger.info(f"Received message from Telegram: {message.id}")
         await self._queue.put(message)

@@ -1,4 +1,4 @@
-from app.adapters.interfaces.polling_service import PollingService
+from app.core.ports.polling_service import PollingService
 from app.core.services.message_service import MessageService
 from app.container import get_container
 

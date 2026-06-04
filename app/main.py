@@ -2,7 +2,6 @@ import logging
 import asyncio
 import os
 from contextlib import asynccontextmanager
-from dotenv import load_dotenv
 
 from litestar import Litestar, WebSocket, websocket
 from litestar.di import Provide
@@ -13,41 +12,41 @@ from app.api.dependencies import get_message_service, get_polling_service
 from app.api.routers.routes import MessageController
 from app.api.routers.health import HealthController
 from app.adapters.engines.factory import EngineAbstractFactory
-from app.adapters.interfaces.db import DatabaseGateway
-from app.adapters.interfaces.polling_service import PollingService
+from app.core.ports.db import DatabaseGateway
+from app.core.ports.polling_service import PollingService
+from app.config import config
 from app.container import get_container, initialize_factories
 from app.core.errors.message import MessageNotFoundError
-
-load_dotenv()
+from app.events import websocket_connections
 
 logger = logging.getLogger(__name__)
-
-websocket_connections: list[WebSocket] = []
 
 
 def create_engines_from_env(abstract_factory: EngineAbstractFactory):
     engines = []
 
-    tg_token = os.getenv("TELEGRAM_BOT_TOKEN")
-    if tg_token and tg_token != "your_telegram_bot_token_here":
+    if config.telegram.token:
         try:
-            engine = abstract_factory.create_engine("telegram", {"token": tg_token})
+            engine = abstract_factory.create_engine(
+                "telegram", {"token": config.telegram.token}
+            )
             engines.append(engine)
             logger.info("Telegram engine created")
         except Exception as e:
             logger.error(f"Error creating Telegram engine: {e}")
 
-    email_host = os.getenv("EMAIL_HOST")
-    if email_host:
+    if config.email.host:
         try:
             engine = abstract_factory.create_engine(
                 "email",
                 {
-                    "host": email_host,
-                    "port": int(os.getenv("EMAIL_PORT", 993)),
-                    "user": os.getenv("EMAIL_USER"),
-                    "password": os.getenv("EMAIL_PASSWORD"),
-                    "poll_interval": int(os.getenv("EMAIL_POLL_INTERVAL", 60)),
+                    "host": config.email.host,
+                    "port": config.email.port,
+                    "user": config.email.user,
+                    "password": config.email.password,
+                    "poll_interval": config.email.poll_interval,
+                    "smtp_host": config.email.smtp_host,
+                    "smtp_port": config.email.smtp_port,
                 },
             )
             engines.append(engine)
@@ -109,7 +108,10 @@ async def websocket_handler(socket: WebSocket) -> None:
         while True:
             await socket.receive_text()
     except Exception:
-        websocket_connections.remove(socket)
+        try:
+            websocket_connections.remove(socket)
+        except ValueError:
+            pass
 
 
 route_handlers: list = [MessageController, HealthController, websocket_handler]
@@ -118,14 +120,6 @@ if os.path.exists("frontend"):
     route_handlers.append(
         create_static_files_router(path="/", directories=["frontend"], html_mode=True)
     )
-
-
-async def broadcast_message(message: dict):
-    for connection in websocket_connections:
-        try:
-            await connection.send_json(message)
-        except Exception:
-            pass
 
 
 app = Litestar(

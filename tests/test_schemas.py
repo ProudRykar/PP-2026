@@ -8,7 +8,7 @@ def test_message_response_creation():
     resp = MessageResponse(
         id="msg:1",
         channel="telegram",
-        sender="user1",
+        sender_id="user1",
         content="hello",
         timestamp=now,
         metadata={"k": "v"},
@@ -16,7 +16,7 @@ def test_message_response_creation():
 
     assert resp.id == "msg:1"
     assert resp.channel == "telegram"
-    assert resp.sender == "user1"
+    assert resp.sender_id == "user1"
     assert resp.content == "hello"
     assert resp.timestamp == now
     assert resp.metadata == {"k": "v"}
@@ -29,7 +29,7 @@ def test_message_response_with_optionals():
     resp = MessageResponse(
         id="msg:2",
         channel="email",
-        sender="a@b.com",
+        sender_id="a@b.com",
         content="body",
         timestamp=now,
         metadata={},

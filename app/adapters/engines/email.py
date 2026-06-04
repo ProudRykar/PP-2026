@@ -1,12 +1,16 @@
 import logging
 import asyncio
 import imaplib
+import smtplib
+import ssl
 import email
+import re
+from email.message import EmailMessage
 from email.header import decode_header
 from typing import AsyncGenerator
 from datetime import datetime
 
-from app.adapters.interfaces.message_engine import MessageEngine
+from app.core.ports.message_engine import MessageEngine
 from app.core.domain.models.message import Message
 from app.core.domain.models.channel_type import ChannelType
 
@@ -21,12 +25,16 @@ class EmailEngine(MessageEngine):
         user: str,
         password: str,
         poll_interval: int = 60,
+        smtp_host: str | None = None,
+        smtp_port: int = 587,
     ):
         self._host = host
         self._port = port
         self._user = user
         self._password = password
         self._poll_interval = poll_interval
+        self._smtp_host = smtp_host or host
+        self._smtp_port = smtp_port
         self._running = False
         self._channel_type = ChannelType.EMAIL
 
@@ -38,8 +46,55 @@ class EmailEngine(MessageEngine):
         self._running = False
         logger.info("Email engine stopped")
 
+    @staticmethod
+    def _extract_email(address: str) -> str:
+        match = re.search(r"<([^>]+)>", address)
+        return match.group(1) if match else address.strip()
+
     async def send_message(self, recipient: str, content: str, **kwargs) -> str:
-        raise NotImplementedError("Email sending via SMTP is not implemented")
+        subject = kwargs.get("subject", "")
+        to_addr = self._extract_email(recipient)
+        logger.info("Sending email via SMTP to %s (subject: %s)", to_addr, subject)
+
+        def _send() -> str:
+            msg = EmailMessage()
+            msg["From"] = self._user
+            msg["To"] = to_addr
+            msg["Subject"] = subject
+            msg.set_content(content)
+
+            try:
+                if self._smtp_port == 465:
+                    ctx = ssl.create_default_context()
+                    with smtplib.SMTP_SSL(
+                        self._smtp_host, self._smtp_port, timeout=10, context=ctx
+                    ) as server:
+                        server.login(self._user, self._password)
+                        server.send_message(msg)
+                else:
+                    with smtplib.SMTP(
+                        self._smtp_host, self._smtp_port, timeout=10
+                    ) as server:
+                        server.starttls()
+                        server.login(self._user, self._password)
+                        server.send_message(msg)
+            except smtplib.SMTPAuthenticationError:
+                logger.error("SMTP auth failed for %s", self._user)
+                raise
+            except OSError as e:
+                logger.error(
+                    "SMTP connection error to %s:%s: %s",
+                    self._smtp_host,
+                    self._smtp_port,
+                    e,
+                )
+                raise
+
+            logger.info("Email sent successfully to %s", to_addr)
+            return f"sent:{to_addr}"
+
+        loop = asyncio.get_running_loop()
+        return await loop.run_in_executor(None, _send)
 
     async def get_incoming(self) -> AsyncGenerator[Message, None]:
         while self._running:
@@ -71,17 +126,48 @@ class EmailEngine(MessageEngine):
                 result.append(str(part))
         return " ".join(result)
 
+    def _extract_body(self, msg) -> tuple[str, str]:
+        if msg.is_multipart():
+            text_content = ""
+            html_content = ""
+            for part in msg.walk():
+                ctype = part.get_content_type()
+                payload = part.get_payload(decode=True)
+                if not isinstance(payload, bytes):
+                    continue
+                if ctype == "text/plain":
+                    decoded = payload.decode("utf-8", errors="ignore")
+                    if decoded.strip():
+                        text_content = decoded
+                elif ctype == "text/html":
+                    html_content = payload.decode("utf-8", errors="ignore")
+            if html_content:
+                return text_content or "", html_content
+            return text_content, ""
+        payload = msg.get_payload(decode=True)
+        if not isinstance(payload, bytes):
+            return "", ""
+        content = payload.decode("utf-8", errors="ignore")
+        ctype = msg.get_content_type() or ""
+        if "html" in ctype.lower():
+            return "", content
+        return content, ""
+
     async def _fetch_new_messages(self) -> list:
-        messages = []
+        messages: list = []
+
+        if not self._user or not self._password:
+            logger.warning("Email credentials not configured, skipping fetch")
+            return messages
 
         try:
             loop = asyncio.get_event_loop()
             mail = await loop.run_in_executor(
                 None, lambda: imaplib.IMAP4_SSL(self._host, self._port)
             )
-            await loop.run_in_executor(
-                None, lambda: mail.login(self._user, self._password)
-            )
+            user_enc = self._user.encode("ascii", errors="ignore").decode("ascii")
+            pass_enc = self._password.encode("ascii", errors="ignore").decode("ascii")
+            await loop.run_in_executor(None, lambda: mail.login(user_enc, pass_enc))
             await loop.run_in_executor(None, lambda: mail.select("inbox"))
 
             status, messages_data = await loop.run_in_executor(
@@ -115,31 +201,21 @@ class EmailEngine(MessageEngine):
                         from_addr = self._decode_header_value(str(msg.get("From", "")))
                         date = msg.get("Date")
 
-                        content = ""
-                        if msg.is_multipart():
-                            for part in msg.walk():
-                                if part.get_content_type() == "text/plain":
-                                    payload = part.get_payload(decode=True)
-                                    if isinstance(payload, bytes):
-                                        content = payload.decode(
-                                            "utf-8", errors="ignore"
-                                        )
-                                        break
-                        else:
-                            payload = msg.get_payload(decode=True)
-                            if isinstance(payload, bytes):
-                                content = payload.decode("utf-8", errors="ignore")
+                        text_body, html_body = self._extract_body(msg)
+                        content = html_body if html_body else text_body
 
                         message = Message(
                             id=f"email:{datetime.now().timestamp()}:{email_id_bytes.decode()}",
                             channel=self._channel_type,
-                            sender=from_addr,
+                            sender_id=from_addr,
                             content=content,
                             timestamp=datetime.now(),
                             metadata={
                                 "subject": subject,
                                 "email_id": email_id_bytes.decode(),
                                 "date": date or "",
+                                "has_html": bool(html_body),
+                                "text_preview": text_body[:500] if text_body else "",
                             },
                             recipient=self._user,
                             subject=subject,

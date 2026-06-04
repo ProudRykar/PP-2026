@@ -5,8 +5,8 @@ from dotenv import load_dotenv
 
 from app.container import configure_container, initialize_factories
 from app.adapters.engines.factory import EngineAbstractFactory
-from app.adapters.interfaces.db import DatabaseGateway
-from app.adapters.interfaces.polling_service import PollingService
+from app.core.ports.db import DatabaseGateway
+from app.core.ports.polling_service import PollingService
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
@@ -39,6 +39,8 @@ def create_engines_from_env(container, abstract_factory: EngineAbstractFactory):
                     "user": os.getenv("EMAIL_USER"),
                     "password": os.getenv("EMAIL_PASSWORD"),
                     "poll_interval": int(os.getenv("EMAIL_POLL_INTERVAL", 60)),
+                    "smtp_host": os.getenv("EMAIL_SMTP_HOST") or email_host,
+                    "smtp_port": int(os.getenv("EMAIL_SMTP_PORT", "465")),
                 },
             )
             engines.append(engine)

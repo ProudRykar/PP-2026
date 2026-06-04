@@ -1,8 +1,8 @@
 import logging
 from typing import Dict
 
-from app.adapters.interfaces.engine_factory import EngineFactory
-from app.adapters.interfaces.message_engine import MessageEngine
+from app.core.ports.engine_factory import EngineFactory
+from app.core.ports.message_engine import MessageEngine
 from app.adapters.engines.telegram import TelegramEngine
 from app.adapters.engines.email import EmailEngine
 from app.core.domain.models.channel_type import ChannelType
@@ -34,6 +34,8 @@ class EmailEngineFactory(EngineFactory):
             user=config["user"],
             password=config["password"],
             poll_interval=config.get("poll_interval", 60),
+            smtp_host=config.get("smtp_host"),
+            smtp_port=config.get("smtp_port", 465),
         )
 
     def get_supported_channel(self) -> str:

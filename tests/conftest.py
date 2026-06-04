@@ -2,12 +2,12 @@ from datetime import datetime
 from typing import AsyncIterator, Optional, List
 from dataclasses import dataclass, field
 
-from app.adapters.interfaces.polling_service import (
+from app.core.ports.polling_service import (
     PollingService as AbstractPollingService,
 )
 from app.core.domain.models.message import Message
 from app.core.domain.models.channel_type import ChannelType
-from app.adapters.interfaces.message_repository import MessageRepository
+from app.core.ports.message_repository import MessageRepository
 from app.core.services.message_service import MessageService
 
 
@@ -64,14 +64,14 @@ class MockEngine:
 def make_message(
     id: str = "test:1",
     channel: str = ChannelType.TELEGRAM,
-    sender: str = "user1",
+    sender_id: str = "user1",
     content: str = "hello",
     **kwargs,
 ) -> Message:
     return Message(
         id=id,
         channel=channel,
-        sender=sender,
+        sender_id=sender_id,
         content=content,
         timestamp=kwargs.pop("timestamp", datetime.now()),
         metadata=kwargs.pop("metadata", {}),
@@ -93,7 +93,7 @@ class MockPollingService(AbstractPollingService):
         pass
 
     async def send_reply(
-        self, channel: str, recipient: str, content: str
+        self, channel: str, recipient: str, content: str, subject: str | None = None
     ) -> str | None:
         self._last_reply = (channel, recipient, content)
         return "mock_reply_id"

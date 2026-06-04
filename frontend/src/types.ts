@@ -1,7 +1,7 @@
 export interface Message {
   id: string
   channel: string
-  sender: string
+  sender_id: string
   content: string
   timestamp: string
   metadata: Record<string, unknown>
@@ -16,6 +16,7 @@ export interface ChannelList {
 export interface ReplyPayload {
   message_id: string
   content: string
+  subject?: string
 }
 
 export interface HealthStatus {

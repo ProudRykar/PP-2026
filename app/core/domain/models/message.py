@@ -3,11 +3,11 @@ from datetime import datetime
 from typing import Optional, Dict, Any
 
 
-@dataclass
+@dataclass(slots=True)
 class Message:
     id: str
     channel: str
-    sender: str
+    sender_id: str
     content: str
     timestamp: datetime
     metadata: Dict[str, Any]
@@ -18,7 +18,7 @@ class Message:
         return {
             "id": self.id,
             "channel": self.channel,
-            "sender": self.sender,
+            "sender_id": self.sender_id,
             "content": self.content,
             "timestamp": self.timestamp.isoformat(),
             "metadata": self.metadata,

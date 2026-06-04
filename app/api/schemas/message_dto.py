@@ -7,7 +7,7 @@ from typing import Optional, Dict, Any
 class MessageResponse:
     id: str
     channel: str
-    sender: str
+    sender_id: str
     content: str
     timestamp: datetime
     metadata: Dict[str, Any]
@@ -19,3 +19,4 @@ class MessageResponse:
 class ReplyRequest:
     message_id: str
     content: str
+    subject: Optional[str] = None

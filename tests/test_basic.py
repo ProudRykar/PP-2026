@@ -8,7 +8,7 @@ def test_message_creation():
     msg = Message(
         id="test:123",
         channel=ChannelType.TELEGRAM,
-        sender="user123",
+        sender_id="user123",
         content="Hello, world!",
         timestamp=datetime.now(),
         metadata={"test": True},
@@ -16,7 +16,7 @@ def test_message_creation():
 
     assert msg.id == "test:123"
     assert msg.channel == ChannelType.TELEGRAM
-    assert msg.sender == "user123"
+    assert msg.sender_id == "user123"
     assert msg.content == "Hello, world!"
     assert msg.to_dict()["channel"] == ChannelType.TELEGRAM
 

@@ -3,9 +3,9 @@ from typing import List, Optional, Dict, Any, cast
 from datetime import datetime
 from sqlalchemy import select, desc
 
-from app.adapters.interfaces.message_repository import MessageRepository
+from app.core.ports.message_repository import MessageRepository
 from app.core.domain.models.message import Message
-from app.adapters.interfaces.db import DatabaseGateway
+from app.core.ports.db import DatabaseGateway
 from app.adapters.repositories.postgres.models import MessageModel
 
 logger = logging.getLogger(__name__)
@@ -20,7 +20,7 @@ class PostgresMessageRepository(MessageRepository):
             msg_model = MessageModel(
                 id=message.id,
                 channel=message.channel,
-                sender=message.sender,
+                sender_id=message.sender_id,
                 recipient=message.recipient,
                 content=message.content,
                 subject=message.subject,
@@ -57,7 +57,7 @@ class PostgresMessageRepository(MessageRepository):
         return Message(
             id=cast(str, m.id),
             channel=cast(str, m.channel),
-            sender=cast(str, m.sender),
+            sender_id=cast(str, m.sender_id) if m.sender_id else "",
             recipient=cast(Optional[str], m.recipient),
             content=cast(str, m.content),
             subject=cast(Optional[str], m.subject),

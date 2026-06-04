@@ -2,11 +2,12 @@ import logging
 import asyncio
 from typing import List
 
-from app.adapters.interfaces.message_engine import MessageEngine
-from app.adapters.interfaces.polling_service import (
+from app.core.ports.message_engine import MessageEngine
+from app.core.ports.polling_service import (
     PollingService as AbstractPollingService,
 )
 from app.core.services.message_service import MessageService
+from app.events import broadcast_message
 
 logger = logging.getLogger(__name__)
 
@@ -33,13 +34,13 @@ class PollingOrchestrator(AbstractPollingService):
         logger.info(f"Polling started for {len(self._engines)} engines")
 
     async def send_reply(
-        self, channel: str, recipient: str, content: str
+        self, channel: str, recipient: str, content: str, subject: str | None = None
     ) -> str | None:
         for engine in self._engines:
             if engine.channel_type == channel:
                 try:
                     return await engine.send_message(
-                        recipient=recipient, content=content
+                        recipient=recipient, content=content, subject=subject or ""
                     )
                 except Exception as e:
                     logger.error(f"Error sending reply via {channel}: {e}")
@@ -67,6 +68,9 @@ class PollingOrchestrator(AbstractPollingService):
                 if message:
                     try:
                         await self._message_service.save_message(message)
+                        await broadcast_message(
+                            {"type": "new_message", **message.to_dict()}
+                        )
                         logger.debug(f"Message from {engine.channel_type} saved")
                     except Exception as e:
                         logger.error(

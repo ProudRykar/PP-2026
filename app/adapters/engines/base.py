@@ -1,7 +1,7 @@
 import logging
 from typing import AsyncGenerator
 
-from app.adapters.interfaces.message_engine import MessageEngine
+from app.core.ports.message_engine import MessageEngine
 from app.core.domain.models.message import Message
 
 logger = logging.getLogger(__name__)
