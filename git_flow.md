@@ -88,3 +88,40 @@ git checkout -b fix/2-email_validation_bug
 - PR должен содержать описание изменений
 - PR не должен быть слишком большим
 - желательно ревью перед merge
+
+## Оформление функций в python коде
+
+Есть определенный стандарт для описания функций в python коде и он такой:
+```
+"""Краткое описание функции.
+
+    Args:
+        Переменная(тип данных): описание входной переменной
+    Exceptions:
+        Название ошибки: Описание ошибки
+    Returns:
+        Переменная(тип данных): описание выходящей переменной
+"""
+```
+
+Пример:
+
+```python
+def example(number: int) -> int:
+    """Функция-пример в git_flow.
+    
+    Args:
+        number (int): Число
+    Exceptions:
+        ZeroNumberError: Если пользователь ввёл 0
+    Returns:
+        digit (int): Число
+    """
+    if number == 0:
+        raise ZeroNumberError
+
+    digit: int = number + 1
+
+    return digit
+
+```

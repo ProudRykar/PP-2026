@@ -1,0 +1,79 @@
+site_name: PP-2026 — Omnichannel Messaging Solution
+site_description: Unified messaging solution for multiple channels
+repo_url: https://github.com/ProudRykar/PP-2026
+edit_uri: edit/main/docs/
+
+theme:
+  name: material
+  language: ru
+  palette:
+    - scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/weather-night
+        name: Switch to dark mode
+    - scheme: slate
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to light mode
+
+nav:
+  - Home: index.md
+
+  - Core:
+    - Domain Models:
+      - Message: core/domain/models/message.md
+      - Channel Type: core/domain/models/channel_type.md
+    - Errors:
+      - Message Error: core/errors/message.md
+    - Services:
+      - Message Service: core/services/message_service.md
+      - Polling Service: core/services/polling_service.md
+
+  - API:
+    - Routers:
+      - Routes: api/routers/routes.md
+      - Health: api/routers/health.md
+    - Schemas:
+      - Message DTO: api/schemas/message_dto.md
+    - Dependencies: api/dependencies.md
+
+  - Adapters:
+    - Interfaces:
+      - Database Gateway: adapters/interfaces/db.md
+      - Message Engine: adapters/interfaces/message_engine.md
+      - Message Repository: adapters/interfaces/message_repository.md
+      - Engine Factory: adapters/interfaces/engine_factory.md
+      - Polling Service: adapters/interfaces/polling_service.md
+    - Engines:
+      - Base Engine: adapters/engines/base.md
+      - Telegram Engine: adapters/engines/telegram.md
+      - Email Engine: adapters/engines/email.md
+      - Engine Factory: adapters/engines/factory.md
+    - Gateways:
+      - PostgreSQL: adapters/gateways/postgres.md
+    - Repositories:
+      - Postgres Models: adapters/repositories/postgres/models.md
+      - Postgres Repository: adapters/repositories/postgres/repository.md
+
+  - App:
+    - Main: main.md
+    - Config: config.md
+    - Container: container.md
+
+  - Tests:
+    - Basic: test_basic.md
+
+markdown_extensions:
+  - admonition
+  - codehilite
+  - pymdownx.superfences
+  - pymdownx.tabbed
+  - toc:
+      permalink: true
+
+plugins:
+  - search

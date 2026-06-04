@@ -7,9 +7,8 @@ from pathlib import Path
 
 sys.path.append(str(Path(__file__).resolve().parents[1]))
 
-from alembic import context
-from src.infrastructure.database import Base
-from src.infrastructure.models import MessageModel
+from alembic import context  # type: ignore[attr-defined]
+from app.adapters.gateways.postgres import Base
 
 config = context.config
 

@@ -214,3 +214,11 @@ redis.conf/
 .wiki_tmp/
 certs
 /logs
+
+
+# Node / npm / frontend
+node_modules/
+frontend/dist/
+frontend/.vite/
+*.tsbuildinfo
+

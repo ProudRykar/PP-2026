@@ -1,9 +1,6 @@
-import pytest
-from app.core.domain.models.message import Message
-from app.core.domain.models.channel_type import ChannelType
-from datetime import datetime
+## def test_message_creation:
 
-
+```python
 def test_message_creation():
     msg = Message(
         id="test:123",
@@ -19,16 +16,22 @@ def test_message_creation():
     assert msg.sender == "user123"
     assert msg.content == "Hello, world!"
     assert msg.to_dict()["channel"] == ChannelType.TELEGRAM
+```
+---
+## def test_channel_types:
 
-
+```python
 def test_channel_types():
     assert ChannelType.TELEGRAM == "telegram"
     assert ChannelType.EMAIL == "email"
     assert ChannelType.SLACK == "slack"
     assert ChannelType.DISCORD == "discord"
     assert ChannelType.VK == "vk"
+```
+---
+## def test_message_service:
 
-
+```python
 @pytest.mark.asyncio
 async def test_message_service():
     from app.core.services.message_service import MessageService
@@ -40,3 +43,5 @@ async def test_message_service():
     service = MessageService(repo)
 
     assert service is not None
+```
+---
