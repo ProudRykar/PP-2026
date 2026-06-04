@@ -7,7 +7,7 @@ from app.api.routers.routes import MessageController
 from app.api.routers.health import HealthController
 from app.core.domain.models.channel_type import ChannelType
 
-from .conftest import make_message, MockMessageRepository
+from .conftest import make_message, MockMessageRepository, MockPollingService
 
 
 @pytest.fixture
@@ -23,13 +23,24 @@ def mock_service(repo):
 
 
 @pytest.fixture
-def test_app(mock_service):
+def mock_polling():
+    return MockPollingService()
+
+
+@pytest.fixture
+def test_app(mock_service, mock_polling):
     async def provide_service():
         return mock_service
 
+    async def provide_polling():
+        return mock_polling
+
     app = Litestar(
         route_handlers=[MessageController, HealthController],
-        dependencies={"service": Provide(provide_service)},
+        dependencies={
+            "service": Provide(provide_service),
+            "polling": Provide(provide_polling),
+        },
     )
     return app
 

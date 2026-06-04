@@ -9,7 +9,7 @@ from litestar.di import Provide
 from litestar.static_files import create_static_files_router
 from litestar.status_codes import HTTP_404_NOT_FOUND
 
-from app.api.dependencies import get_message_service
+from app.api.dependencies import get_message_service, get_polling_service
 from app.api.routers.routes import MessageController
 from app.api.routers.health import HealthController
 from app.adapters.engines.factory import EngineAbstractFactory
@@ -133,6 +133,7 @@ app = Litestar(
     lifespan=[lifespan],
     dependencies={
         "service": Provide(get_message_service, sync_to_thread=False),
+        "polling": Provide(get_polling_service, sync_to_thread=False),
     },
     exception_handlers={
         MessageNotFoundError: message_not_found_handler,

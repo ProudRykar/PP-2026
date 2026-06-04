@@ -15,3 +15,9 @@ class PollingService(ABC):
     @abstractmethod
     def register_engine(self, engine: MessageEngine) -> None:
         pass
+
+    @abstractmethod
+    async def send_reply(
+        self, channel: str, recipient: str, content: str
+    ) -> str | None:
+        pass

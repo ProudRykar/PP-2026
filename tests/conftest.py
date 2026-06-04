@@ -2,6 +2,9 @@ from datetime import datetime
 from typing import AsyncIterator, Optional, List
 from dataclasses import dataclass, field
 
+from app.adapters.interfaces.polling_service import (
+    PollingService as AbstractPollingService,
+)
 from app.core.domain.models.message import Message
 from app.core.domain.models.channel_type import ChannelType
 from app.adapters.interfaces.message_repository import MessageRepository
@@ -74,6 +77,26 @@ def make_message(
         metadata=kwargs.pop("metadata", {}),
         **kwargs,
     )
+
+
+class MockPollingService(AbstractPollingService):
+    def __init__(self):
+        self._last_reply: tuple[str, str, str] | None = None
+
+    async def start_polling(self) -> None:
+        pass
+
+    async def stop_polling(self) -> None:
+        pass
+
+    def register_engine(self, engine) -> None:
+        pass
+
+    async def send_reply(
+        self, channel: str, recipient: str, content: str
+    ) -> str | None:
+        self._last_reply = (channel, recipient, content)
+        return "mock_reply_id"
 
 
 def make_message_service(

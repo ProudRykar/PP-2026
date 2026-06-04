@@ -6,6 +6,7 @@ from litestar.params import Parameter
 from litestar.status_codes import HTTP_404_NOT_FOUND
 
 from app.api.schemas.message_dto import ReplyRequest
+from app.adapters.interfaces.polling_service import PollingService
 from app.core.domain.models.channel_type import ChannelType
 from app.core.errors.message import MessageNotFoundError
 from app.core.services.message_service import MessageService
@@ -48,12 +49,15 @@ class MessageController(Controller):
     async def reply_to_message(
         self,
         service: MessageService,
+        polling: PollingService,
         data: ReplyRequest,
     ) -> dict:
         try:
-            await service.reply_to_message(data.message_id, data.content)
+            original = await service.reply_to_message(data.message_id, data.content)
         except MessageNotFoundError as e:
             raise HTTPException(detail=str(e), status_code=HTTP_404_NOT_FOUND)
+
+        await polling.send_reply(original.channel, original.sender, data.content)
         return {"status": "success", "message": "Reply sent"}
 
     @get("/channels")

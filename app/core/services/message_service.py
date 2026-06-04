@@ -25,10 +25,11 @@ class MessageService:
     async def get_message(self, message_id: str) -> Optional[Message]:
         return await self._repository.get_message_by_id(message_id)
 
-    async def reply_to_message(self, message_id: str, content: str) -> None:
+    async def reply_to_message(self, message_id: str, content: str) -> Message:
         original = await self._repository.get_message_by_id(message_id)
         if not original:
             from app.core.errors.message import MessageNotFoundError
 
             raise MessageNotFoundError(message_id)
         logger.info(f"Reply to {message_id}: {content}")
+        return original
