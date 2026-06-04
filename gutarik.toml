@@ -1,0 +1,7 @@
+[gutarik]
+project_dirs = ["src", "tests"]
+docs_dir = "docs"
+supported_ext = [".py"]
+wiki_repo = "https://github.com/ProudRykar/PP-2026/wiki"
+local_wiki_dir = ".wiki_tmp"
+exclude_dirs = []
