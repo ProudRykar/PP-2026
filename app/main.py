@@ -101,14 +101,6 @@ def message_not_found_handler(request, exc: MessageNotFoundError):
     return Response(content={"detail": str(exc)}, status_code=HTTP_404_NOT_FOUND)
 
 
-route_handlers: list = [MessageController, HealthController]
-
-if os.path.exists("frontend"):
-    route_handlers.append(
-        create_static_files_router(path="/", directories=["frontend"], html_mode=True)
-    )
-
-
 @websocket("/ws")
 async def websocket_handler(socket: WebSocket) -> None:
     await socket.accept()
@@ -118,6 +110,14 @@ async def websocket_handler(socket: WebSocket) -> None:
             await socket.receive_text()
     except Exception:
         websocket_connections.remove(socket)
+
+
+route_handlers: list = [MessageController, HealthController, websocket_handler]
+
+if os.path.exists("frontend"):
+    route_handlers.append(
+        create_static_files_router(path="/", directories=["frontend"], html_mode=True)
+    )
 
 
 async def broadcast_message(message: dict):

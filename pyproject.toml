@@ -23,6 +23,7 @@ dependencies = [
     "ruff (>=0.15.15,<0.16.0)",
     "pre-commit (>=4.6.0,<5.0.0)",
     "mypy (>=2.1.0,<3.0.0)",
+    "websockets (>=15.0,<16.0)",
     "gutarik (>=0.1.2,<0.2.0)",
     "mkdocs (>=1.6.1,<2.0.0)",
     "mkdocs-material (>=9.7.6,<10.0.0)",
@@ -39,7 +40,6 @@ asyncio_mode = "auto"
 ignore_missing_imports = true
 
 [tool.gutarik]
-
 project_dirs = ["app", "tests"]
 docs_dir = "docs"
 supported_ext = [".py"]
