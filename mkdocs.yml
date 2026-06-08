@@ -22,6 +22,7 @@ theme:
 
 nav:
   - Home: index.md
+  - Roadmap: roadmap.md
 
   - Core:
     - Domain Models:
