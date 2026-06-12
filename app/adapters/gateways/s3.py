@@ -38,6 +38,10 @@ class MinioGateway(S3Interface):
             aws_secret_access_key=self._secret_key,
         )
 
+        self._ensure_bucket()
+
+    def _ensure_bucket(self) -> None:
+        """Проверяет существование бакета и создаёт, если его нет."""
         try:
             existing_buckets = [
                 b["Name"] for b in self._client.list_buckets().get("Buckets", [])
@@ -45,7 +49,7 @@ class MinioGateway(S3Interface):
             if self._bucket not in existing_buckets:
                 self._client.create_bucket(Bucket=self._bucket)
         except ClientError as e:
-            raise Exception(f"Ошибка подключения к MiniO: {str(e)}") from e
+            raise Exception(f"Ошибка создания бакета: {str(e)}") from e
 
     def upload_file(self, file_path: str, object_name: str) -> None:
         """Загружает файл в MiniO.
@@ -76,6 +80,7 @@ class MinioGateway(S3Interface):
         """
         if not self._client:
             self.connect()
+        self._ensure_bucket()
         try:
             self._client.put_object(
                 Bucket=self._bucket,
