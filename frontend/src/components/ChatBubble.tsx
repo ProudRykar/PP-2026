@@ -1,4 +1,5 @@
 import type { Message } from '../types'
+import { StickerRenderer } from './StickerRenderer'
 
 interface ChatBubbleProps {
   message: Message
@@ -37,7 +38,11 @@ export function ChatBubble({ message, isOwn, isFirst, isLast, senderLabel, chann
           ${isOwn ? 'hover:bg-blue-600' : 'hover:bg-gray-200'}
         `}
       >
-        <p>{message.content || <span className="italic opacity-70">Нет текста</span>}</p>
+        {message.message_type === 'sticker' && message.metadata?.file_url ? (
+          <StickerRenderer metadata={message.metadata} />
+        ) : (
+          <p>{message.content || <span className="italic opacity-70">Нет текста</span>}</p>
+        )}
         <div className={`mt-0.5 flex items-center justify-end gap-1 ${isLast ? '' : 'opacity-0 group-hover:opacity-100'}`}>
           <span className={`text-[10px] ${isOwn ? 'text-blue-200' : 'text-gray-400'}`}>{time}</span>
           {isLast && <span className={`text-[10px] ${isOwn ? 'text-blue-200' : 'text-gray-400'}`}>{date}</span>}

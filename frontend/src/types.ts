@@ -4,6 +4,7 @@ export interface Message {
   sender_id: string
   content: string
   timestamp: string
+  message_type?: string
   metadata: Record<string, unknown>
   recipient: string | null
   subject: string | null

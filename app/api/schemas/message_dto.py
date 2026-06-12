@@ -13,6 +13,8 @@ class MessageResponse:
     metadata: Dict[str, Any]
     recipient: Optional[str] = None
     subject: Optional[str] = None
+    message_type: str = "text"
+
 
 
 @dataclass(slots=True)
@@ -20,3 +22,4 @@ class ReplyRequest:
     message_id: str
     content: str
     subject: Optional[str] = None
+
