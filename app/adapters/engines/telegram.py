@@ -7,7 +7,7 @@ from telegram.ext import Application, MessageHandler, filters
 
 from app.core.ports.message_engine import MessageEngine
 from app.core.domain.models.message import Message
-from app.core.domain.models.channel_type import ChannelType
+from app.core.domain.models.channel_type import ChannelType, MessageType
 
 logger = logging.getLogger(__name__)
 
@@ -66,19 +66,26 @@ class TelegramEngine(MessageEngine):
 
         content = msg.text or msg.caption or ""
 
+        message_type = MessageType.TEXT
         media_type = None
         if msg.photo:
             media_type = "photo"
+            message_type = MessageType.PHOTO
         elif msg.document:
             media_type = "document"
+            message_type = MessageType.DOCUMENT
         elif msg.video:
             media_type = "video"
+            message_type = MessageType.VIDEO
         elif msg.audio:
             media_type = "audio"
+            message_type = MessageType.AUDIO
         elif msg.voice:
             media_type = "voice"
+            message_type = MessageType.VOICE
         elif msg.sticker:
             media_type = "sticker"
+            message_type = MessageType.STICKER
 
         if not content and media_type:
             content = f"[{media_type}]"
@@ -98,6 +105,7 @@ class TelegramEngine(MessageEngine):
             sender_id=str(msg.from_user.id),
             content=content,
             timestamp=msg.date,
+            message_type=message_type,
             metadata=metadata,
         )
         logger.info(f"Received message from Telegram: {message.id}")

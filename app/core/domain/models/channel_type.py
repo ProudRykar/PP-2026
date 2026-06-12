@@ -7,3 +7,13 @@ class ChannelType(StrEnum):
     SLACK = "slack"
     DISCORD = "discord"
     VK = "vk"
+
+
+class MessageType(StrEnum):
+    TEXT = "text"
+    STICKER = "sticker"
+    PHOTO = "photo"
+    DOCUMENT = "document"
+    VIDEO = "video"
+    AUDIO = "audio"
+    VOICE = "voice"
