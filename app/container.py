@@ -6,13 +6,18 @@ from app.adapters.engines.factory import (
     TelegramEngineFactory,
     EmailEngineFactory,
 )
+from app.adapters.gateways.s3 import MinioGateway
 from app.core.ports.db import DatabaseGateway
 from app.core.ports.message_repository import MessageRepository
 from app.core.ports.polling_service import PollingService
+from app.core.ports.s3 import S3Interface
+from app.core.ports.sender_repository import SenderRepository
 from app.adapters.gateways.postgres import PostgresDatabaseGateway
 from app.adapters.repositories.postgres.repository import PostgresMessageRepository
+from app.adapters.repositories.postgres.sender_repository import PostgresSenderRepository
 from app.core.services.message_service import MessageService
 from app.core.services.polling_service import PollingOrchestrator
+from app.config import config
 
 logger = logging.getLogger(__name__)
 
@@ -31,7 +36,12 @@ def configure_container() -> punq.Container:
 
     container.register(EngineAbstractFactory, scope=punq.Scope.singleton)
 
-    container.register(TelegramEngineFactory, instance=TelegramEngineFactory())
+    if config.minio.endpoint:
+        container.register(S3Interface, MinioGateway, scope=punq.Scope.singleton)
+
+    container.register(TelegramEngineFactory, instance=TelegramEngineFactory(
+        s3=container.resolve(S3Interface) if config.minio.endpoint else None
+    ))
     container.register(EmailEngineFactory, instance=EmailEngineFactory())
 
     container.register(
@@ -43,6 +53,8 @@ def configure_container() -> punq.Container:
     )
 
     container.register(PollingService, PollingOrchestrator, scope=punq.Scope.singleton)
+
+    container.register(SenderRepository, PostgresSenderRepository, scope=punq.Scope.singleton)
 
     container.register(MessageService)
 

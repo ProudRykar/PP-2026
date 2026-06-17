@@ -43,6 +43,7 @@ class MessageModel(Base):
     )
     recipient = Column(String(255), nullable=True)
     content = Column(Text, nullable=False)
+    message_type = Column(String(20), nullable=False, server_default="text")
     subject = Column(String(500), nullable=True)
     timestamp = Column(DateTime(timezone=True), nullable=False)
     metadata_ = Column("metadata", JSON, nullable=True)

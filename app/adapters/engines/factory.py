@@ -3,6 +3,7 @@ from typing import Dict
 
 from app.core.ports.engine_factory import EngineFactory
 from app.core.ports.message_engine import MessageEngine
+from app.core.ports.s3 import S3Interface
 from app.adapters.engines.telegram import TelegramEngine
 from app.adapters.engines.email import EmailEngine
 from app.core.domain.models.channel_type import ChannelType
@@ -11,11 +12,14 @@ logger = logging.getLogger(__name__)
 
 
 class TelegramEngineFactory(EngineFactory):
+    def __init__(self, s3: S3Interface | None = None) -> None:
+        self._s3 = s3
+
     def create_engine(self, config: dict) -> MessageEngine:
         token = config.get("token")
         if not token:
             raise ValueError("Telegram token is required")
-        return TelegramEngine(token=token)
+        return TelegramEngine(token=token, s3=self._s3)
 
     def get_supported_channel(self) -> str:
         return ChannelType.TELEGRAM

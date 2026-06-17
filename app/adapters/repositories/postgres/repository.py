@@ -5,8 +5,9 @@ from sqlalchemy import select, desc
 
 from app.core.ports.message_repository import MessageRepository
 from app.core.domain.models.message import Message
+from app.core.domain.models.channel_type import MessageType
 from app.core.ports.db import DatabaseGateway
-from app.adapters.repositories.postgres.models import MessageModel
+from app.adapters.repositories.postgres.models import MessageModel, SenderModel
 
 logger = logging.getLogger(__name__)
 
@@ -17,12 +18,21 @@ class PostgresMessageRepository(MessageRepository):
 
     async def save_message(self, message: Message) -> None:
         async with self._db.get_session() as session:
+            existing = await session.execute(
+                select(SenderModel).where(SenderModel.id == message.sender_id)
+            )
+            if not existing.scalar_one_or_none():
+                sender = SenderModel(id=message.sender_id, name=message.sender_id)
+                session.add(sender)
+                await session.flush()
+
             msg_model = MessageModel(
                 id=message.id,
                 channel=message.channel,
                 sender_id=message.sender_id,
                 recipient=message.recipient,
                 content=message.content,
+                message_type=message.message_type.value,
                 subject=message.subject,
                 timestamp=message.timestamp,
                 metadata_=message.metadata,
@@ -62,5 +72,6 @@ class PostgresMessageRepository(MessageRepository):
             content=cast(str, m.content),
             subject=cast(Optional[str], m.subject),
             timestamp=cast(datetime, m.timestamp),
+            message_type=MessageType(m.message_type) if m.message_type else MessageType.TEXT,
             metadata=cast(Dict[str, Any], m.metadata_ if m.metadata_ else {}),
         )

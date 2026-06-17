@@ -12,7 +12,7 @@ from datetime import datetime
 
 from app.core.ports.message_engine import MessageEngine
 from app.core.domain.models.message import Message
-from app.core.domain.models.channel_type import ChannelType
+from app.core.domain.models.channel_type import ChannelType, MessageType
 
 logger = logging.getLogger(__name__)
 
@@ -210,6 +210,7 @@ class EmailEngine(MessageEngine):
                             sender_id=from_addr,
                             content=content,
                             timestamp=datetime.now(),
+                            message_type=MessageType.TEXT,
                             metadata={
                                 "subject": subject,
                                 "email_id": email_id_bytes.decode(),

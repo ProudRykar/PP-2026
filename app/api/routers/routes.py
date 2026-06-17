@@ -25,6 +25,7 @@ def _to_response(msg: Message) -> MessageResponse:
         sender_id=msg.sender_id,
         content=msg.content,
         timestamp=msg.timestamp,
+        message_type=msg.message_type.value,
         metadata=msg.metadata,
         recipient=msg.recipient,
         subject=msg.subject,
