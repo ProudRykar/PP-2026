@@ -6,9 +6,9 @@ from contextlib import asynccontextmanager
 from litestar import Litestar, WebSocket, websocket
 from litestar.di import Provide
 from litestar.static_files import create_static_files_router
-from litestar.status_codes import HTTP_404_NOT_FOUND
 
 from app.api.dependencies import get_message_service, get_polling_service
+from app.api.exceptions.handlers import EXCEPTION_HANDLERS
 from app.api.routers.routes import MessageController
 from app.api.routers.health import HealthController
 from app.adapters.engines.factory import EngineAbstractFactory
@@ -16,7 +16,6 @@ from app.core.ports.db import DatabaseGateway
 from app.core.ports.polling_service import PollingService
 from app.config import config
 from app.container import get_container, initialize_factories
-from app.core.errors.message import MessageNotFoundError
 from app.events import websocket_connections
 
 logger = logging.getLogger(__name__)
@@ -94,12 +93,6 @@ async def lifespan(app: Litestar):
     logger.info("Application shut down")
 
 
-def message_not_found_handler(request, exc: MessageNotFoundError):
-    from litestar import Response
-
-    return Response(content={"detail": str(exc)}, status_code=HTTP_404_NOT_FOUND)
-
-
 @websocket("/ws")
 async def websocket_handler(socket: WebSocket) -> None:
     await socket.accept()
@@ -129,7 +122,5 @@ app = Litestar(
         "service": Provide(get_message_service, sync_to_thread=False),
         "polling": Provide(get_polling_service, sync_to_thread=False),
     },
-    exception_handlers={
-        MessageNotFoundError: message_not_found_handler,
-    },
+    exception_handlers=EXCEPTION_HANDLERS,
 )
