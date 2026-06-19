@@ -1,6 +1,6 @@
 from logging.config import fileConfig
-from sqlalchemy import engine_from_config, pool
-from sqlalchemy.ext.asyncio import AsyncEngine
+from sqlalchemy import pool
+from sqlalchemy.ext.asyncio import create_async_engine
 import asyncio
 import sys
 from pathlib import Path
@@ -8,6 +8,7 @@ from pathlib import Path
 sys.path.append(str(Path(__file__).resolve().parents[1]))
 
 from alembic import context  # type: ignore[attr-defined]
+from app.config import config as app_config
 from app.adapters.gateways.postgres import Base
 
 config = context.config
@@ -17,11 +18,12 @@ if config.config_file_name is not None:
 
 target_metadata = Base.metadata
 
+database_url = app_config.db.build_url()
+
 
 def run_migrations_offline() -> None:
-    url = config.get_main_option("sqlalchemy.url")
     context.configure(
-        url=url,
+        url=database_url,
         target_metadata=target_metadata,
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
@@ -38,13 +40,9 @@ def do_run_migrations(connection):
 
 
 async def run_async_migrations():
-    connectable = AsyncEngine(
-        engine_from_config(
-            config.get_section(config.config_ini_section),
-            prefix="sqlalchemy.",
-            poolclass=pool.NullPool,
-            future=True,
-        )
+    connectable = create_async_engine(
+        database_url,
+        poolclass=pool.NullPool,
     )
 
     async with connectable.connect() as connection:

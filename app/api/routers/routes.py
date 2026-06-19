@@ -3,9 +3,7 @@ import logging
 from datetime import datetime, timezone
 
 from litestar import Controller, get, post
-from litestar.exceptions import HTTPException
 from litestar.params import Parameter
-from litestar.status_codes import HTTP_404_NOT_FOUND
 
 from app.api.schemas.message_dto import MessageResponse, ReplyRequest
 from app.core.ports.polling_service import PollingService
@@ -58,9 +56,7 @@ class MessageController(Controller):
     ) -> MessageResponse:
         message = await service.get_message(message_id)
         if not message:
-            raise HTTPException(
-                detail="Message not found", status_code=HTTP_404_NOT_FOUND
-            )
+            raise MessageNotFoundError(message_id)
         return _to_response(message)
 
     @post("/messages/reply", status_code=200)
@@ -70,10 +66,7 @@ class MessageController(Controller):
         polling: PollingService,
         data: ReplyRequest,
     ) -> dict:
-        try:
-            original = await service.reply_to_message(data.message_id, data.content)
-        except MessageNotFoundError as e:
-            raise HTTPException(detail=str(e), status_code=HTTP_404_NOT_FOUND)
+        original = await service.reply_to_message(data.message_id, data.content)
 
         reply_subject = (
             data.subject or f"Re: {original.subject}" if original.subject else None

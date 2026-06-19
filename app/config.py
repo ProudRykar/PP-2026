@@ -62,6 +62,11 @@ class AppConfig:
     testing: bool = field(
         default_factory=lambda: os.getenv("TESTING", "false").lower() == "true"
     )
+    base_problem_uri: str = field(
+        default_factory=lambda: os.getenv(
+            "BASE_PROBLEM_URI", "https://errors.omnichannel.local"
+        )
+    )
 
 
 @dataclass

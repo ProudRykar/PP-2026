@@ -5,6 +5,7 @@ from litestar.testing import TestClient
 
 from app.api.routers.routes import MessageController
 from app.api.routers.health import HealthController
+from app.api.exceptions.handlers import EXCEPTION_HANDLERS
 from app.core.domain.models.channel_type import ChannelType
 
 from .conftest import make_message, MockMessageRepository, MockPollingService
@@ -41,6 +42,7 @@ def test_app(mock_service, mock_polling):
             "service": Provide(provide_service),
             "polling": Provide(provide_polling),
         },
+        exception_handlers=EXCEPTION_HANDLERS,
     )
     return app
 
@@ -96,7 +98,7 @@ def test_get_message_found(client, repo):
 def test_get_message_not_found(client):
     resp = client.get("/api/messages/no:such")
     assert resp.status_code == 404
-    assert resp.json()["detail"] == "Message not found"
+    assert resp.json()["detail"] == "Message no:such not found"
 
 
 def test_get_channels(client):
