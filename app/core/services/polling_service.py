@@ -1,20 +1,23 @@
 import logging
 import asyncio
-from typing import List
+import re
+from typing import List, Optional
 
 from app.core.ports.message_engine import MessageEngine
 from app.core.ports.polling_service import (
     PollingService as AbstractPollingService,
 )
 from app.core.services.message_service import MessageService
+from app.core.services.client_service import ClientService
 from app.events import broadcast_message
 
 logger = logging.getLogger(__name__)
 
 
 class PollingOrchestrator(AbstractPollingService):
-    def __init__(self, message_service: MessageService):
+    def __init__(self, message_service: MessageService, client_service: ClientService):
         self._message_service = message_service
+        self._client_service = client_service
         self._engines: List[MessageEngine] = []
         self._running = False
         self._tasks: List[asyncio.Task] = []
@@ -70,11 +73,56 @@ class PollingOrchestrator(AbstractPollingService):
         self._tasks.clear()
         logger.info("Polling stopped")
 
+    def _extract_client_info(
+        self, message
+    ) -> tuple[str, str, Optional[str], Optional[str]]:
+        channel = message.channel
+        raw_id = message.sender_id
+        external_id = raw_id
+        name: Optional[str] = None
+        username: Optional[str] = None
+
+        if channel == "telegram":
+            username = message.metadata.get("username")
+            first_name = message.metadata.get("first_name")
+            name = first_name or username or external_id
+        elif channel == "email":
+            match_email = re.search(r"<([^>]+)>", raw_id)
+            if match_email:
+                external_id = match_email.group(1)
+            match_name = re.match(r'^"?([^"<]+)"?\s*<', raw_id)
+            if match_name:
+                name = match_name.group(1).strip()
+            else:
+                name = external_id.split("@")[0] if "@" in external_id else external_id
+        else:
+            name = external_id
+
+        return channel, external_id, name, username
+
     async def _poll_engine(self, engine: MessageEngine) -> None:
         try:
             async for message in engine.get_incoming():
                 if message:
                     try:
+                        channel, external_id, name, username = (
+                            self._extract_client_info(message)
+                        )
+                        avatar_url = (
+                            message.metadata.get("file_url")
+                            if channel == "telegram"
+                            and message.metadata.get("media_type") == "photo"
+                            else None
+                        )
+                        await self._client_service.get_or_create_client(
+                            channel=channel,
+                            external_id=external_id,
+                            name=name,
+                            avatar_url=avatar_url,
+                            username=username,
+                            display_name=name,
+                        )
+
                         await self._message_service.save_message(message)
                         await broadcast_message(
                             {"type": "new_message", **message.to_dict()}

@@ -1,5 +1,5 @@
 import logging
-from typing import Optional
+from typing import Optional, cast
 
 from sqlalchemy import select
 
@@ -31,7 +31,7 @@ class PostgresSenderRepository(SenderRepository):
             )
             model = result.scalar_one_or_none()
             if model:
-                return Sender(id=model.id, apps={})
+                return Sender(id=cast(str, model.id), apps={})
             return None
 
     async def find_by_identity(self, channel: str, address: str) -> Optional[Sender]:
@@ -40,4 +40,4 @@ class PostgresSenderRepository(SenderRepository):
     async def find_all(self) -> list[Sender]:
         async with self._db.get_session() as session:
             result = await session.execute(select(SenderModel))
-            return [Sender(id=m.id, apps={}) for m in result.scalars().all()]
+            return [Sender(id=cast(str, m.id), apps={}) for m in result.scalars().all()]

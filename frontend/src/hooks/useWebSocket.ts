@@ -1,44 +1,55 @@
-import { useEffect, useRef, useCallback } from 'react'
+import { useEffect, useRef } from 'react'
 
 const RECONNECT_DELAY = 3000
 
 export function useWebSocket(onMessage: (data: unknown) => void) {
-  const wsRef = useRef<WebSocket | null>(null)
   const onMessageRef = useRef(onMessage)
+  const wsRef = useRef<WebSocket | null>(null)
+  const intentionalCloseRef = useRef(false)
   onMessageRef.current = onMessage
 
-  const connect = useCallback(() => {
-    const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:'
-    const url = `${protocol}//${location.host}/ws`
-    const ws = new WebSocket(url)
+  useEffect(() => {
+    let reconnectTimer: ReturnType<typeof setTimeout> | null = null
 
-    ws.onopen = () => {
-      wsRef.current = ws
-    }
+    function connect() {
+      if (wsRef.current) return
 
-    ws.onmessage = (event) => {
-      try {
-        const data = JSON.parse(event.data)
-        onMessageRef.current(data)
-      } catch {
-        // ignore non-json messages
+      const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:'
+      const url = `${protocol}//${location.host}/ws`
+      const ws = new WebSocket(url)
+
+      ws.onopen = () => {
+        wsRef.current = ws
+      }
+
+      ws.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data)
+          onMessageRef.current(data)
+        } catch {
+          // ignore non-json messages
+        }
+      }
+
+      ws.onclose = () => {
+        wsRef.current = null
+        if (!intentionalCloseRef.current) {
+          reconnectTimer = setTimeout(connect, RECONNECT_DELAY)
+        }
+      }
+
+      ws.onerror = () => {
+        ws.close()
       }
     }
 
-    ws.onclose = () => {
-      wsRef.current = null
-      setTimeout(connect, RECONNECT_DELAY)
-    }
+    connect()
 
-    ws.onerror = () => {
-      ws.close()
+    return () => {
+      intentionalCloseRef.current = true
+      if (reconnectTimer) clearTimeout(reconnectTimer)
+      wsRef.current?.close()
+      wsRef.current = null
     }
   }, [])
-
-  useEffect(() => {
-    connect()
-    return () => {
-      wsRef.current?.close()
-    }
-  }, [connect])
 }

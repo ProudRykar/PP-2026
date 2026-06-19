@@ -1,4 +1,4 @@
-import type { Message, ChannelList, ReplyPayload, HealthStatus, UploadResult } from './types'
+import type { Message, ChannelList, ReplyPayload, HealthStatus, UploadResult, Client, ClientUpdatePayload } from './types'
 
 const BASE = ''
 
@@ -14,9 +14,10 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return res.json()
 }
 
-export function fetchMessages(channel?: string): Promise<Message[]> {
+export function fetchMessages(channel?: string, senderId?: string): Promise<Message[]> {
   const params = new URLSearchParams()
   if (channel && channel !== 'all') params.set('channel', channel)
+  if (senderId) params.set('sender_id', senderId)
   const qs = params.toString()
   return request<Message[]>(`/api/messages${qs ? `?${qs}` : ''}`)
 }
@@ -38,6 +39,26 @@ export function fetchChannels(): Promise<ChannelList> {
 
 export function fetchHealth(): Promise<HealthStatus> {
   return request<HealthStatus>('/health')
+}
+
+export function fetchAllClients(): Promise<Client[]> {
+  return request<Client[]>('/api/clients')
+}
+
+export function fetchClientByChannel(channel: string, externalId: string): Promise<Client | null> {
+  const params = new URLSearchParams({ channel, external_id: externalId })
+  return request<Client | null>(`/api/clients/by-channel?${params}`)
+}
+
+export function fetchClient(id: string): Promise<Client> {
+  return request<Client>(`/api/clients/${encodeURIComponent(id)}`)
+}
+
+export function updateClient(id: string, payload: ClientUpdatePayload): Promise<Client> {
+  return request<Client>(`/api/clients/${encodeURIComponent(id)}`, {
+    method: 'PUT',
+    body: JSON.stringify(payload),
+  })
 }
 
 export async function uploadFile(file: File): Promise<UploadResult> {

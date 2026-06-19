@@ -7,10 +7,15 @@ from litestar import Litestar, WebSocket, websocket
 from litestar.di import Provide
 from litestar.static_files import create_static_files_router
 
-from app.api.dependencies import get_message_service, get_polling_service
+from app.api.dependencies import (
+    get_message_service,
+    get_polling_service,
+    get_client_service,
+)
 from app.api.exceptions.handlers import EXCEPTION_HANDLERS
 from app.api.routers.routes import MessageController
 from app.api.routers.health import HealthController
+from app.api.routers.client_routes import ClientController
 from app.adapters.engines.factory import EngineAbstractFactory
 from app.core.ports.db import DatabaseGateway
 from app.core.ports.polling_service import PollingService
@@ -107,7 +112,12 @@ async def websocket_handler(socket: WebSocket) -> None:
             pass
 
 
-route_handlers: list = [MessageController, HealthController, websocket_handler]
+route_handlers: list = [
+    MessageController,
+    HealthController,
+    ClientController,
+    websocket_handler,
+]
 
 if os.path.exists("frontend"):
     route_handlers.append(
@@ -121,6 +131,7 @@ app = Litestar(
     dependencies={
         "service": Provide(get_message_service, sync_to_thread=False),
         "polling": Provide(get_polling_service, sync_to_thread=False),
+        "client_service": Provide(get_client_service, sync_to_thread=False),
     },
-    exception_handlers=EXCEPTION_HANDLERS,
+    exception_handlers=EXCEPTION_HANDLERS,  # type: ignore[arg-type]
 )
