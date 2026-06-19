@@ -75,7 +75,7 @@ export default function App() {
         <FilterBar channels={channels} current={channel} onChange={setChannel} />
       </div>
 
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto px-4">
         <MessageList messages={messages} loading={loading} selectedId={selected?.id ?? null} onSelect={setSelected} />
         <div ref={bottomRef} />
       </div>
