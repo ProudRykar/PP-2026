@@ -34,13 +34,21 @@ class PollingOrchestrator(AbstractPollingService):
         logger.info(f"Polling started for {len(self._engines)} engines")
 
     async def send_reply(
-        self, channel: str, recipient: str, content: str, subject: str | None = None
+        self,
+        channel: str,
+        recipient: str,
+        content: str,
+        subject: str | None = None,
+        **kwargs,
     ) -> str | None:
         for engine in self._engines:
             if engine.channel_type == channel:
                 try:
                     return await engine.send_message(
-                        recipient=recipient, content=content, subject=subject or ""
+                        recipient=recipient,
+                        content=content,
+                        subject=subject or "",
+                        **kwargs,
                     )
                 except Exception as e:
                     logger.error(f"Error sending reply via {channel}: {e}")

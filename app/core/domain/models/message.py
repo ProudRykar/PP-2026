@@ -16,6 +16,7 @@ class Message:
     message_type: MessageType = MessageType.TEXT
     recipient: Optional[str] = None
     subject: Optional[str] = None
+    parent_id: Optional[str] = None
 
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -28,4 +29,5 @@ class Message:
             "metadata": self.metadata,
             "recipient": self.recipient,
             "subject": self.subject,
+            "parent_id": self.parent_id,
         }

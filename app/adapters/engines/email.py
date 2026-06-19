@@ -37,6 +37,7 @@ class EmailEngine(MessageEngine):
         self._smtp_port = smtp_port
         self._running = False
         self._channel_type = ChannelType.EMAIL
+        self._last_uid: int = 0
 
     async def start(self) -> None:
         self._running = True
@@ -170,19 +171,25 @@ class EmailEngine(MessageEngine):
             await loop.run_in_executor(None, lambda: mail.login(user_enc, pass_enc))
             await loop.run_in_executor(None, lambda: mail.select("inbox"))
 
+            search_criteria = (
+                "UNSEEN"
+                if self._last_uid == 0
+                else f"UNSEEN UID {self._last_uid + 1}:*"
+            )
             status, messages_data = await loop.run_in_executor(
-                None, lambda: mail.search(None, "ALL")
+                None,
+                lambda: mail.uid("search", None, search_criteria),  # type: ignore[arg-type]
             )
 
             if status == "OK":
                 raw_ids = messages_data[0]
-                email_ids: list[bytes] = (
+                uid_list: list[bytes] = (
                     raw_ids.split() if isinstance(raw_ids, bytes) else []
                 )
-                for email_id_bytes in email_ids[-10:]:
-                    email_id_str = email_id_bytes.decode()
+                for uid_bytes in uid_list[-10:]:
+                    uid_str = uid_bytes.decode()
                     status, msg_data = await loop.run_in_executor(
-                        None, lambda: mail.fetch(email_id_str, "(RFC822)")
+                        None, lambda: mail.uid("fetch", uid_str, "(RFC822)")
                     )
                     if status == "OK":
                         raw_item = msg_data[0]
@@ -204,8 +211,12 @@ class EmailEngine(MessageEngine):
                         text_body, html_body = self._extract_body(msg)
                         content = html_body if html_body else text_body
 
+                        uid_int = int(uid_str)
+                        if uid_int > self._last_uid:
+                            self._last_uid = uid_int
+
                         message = Message(
-                            id=f"email:{datetime.now().timestamp()}:{email_id_bytes.decode()}",
+                            id=f"email:{datetime.now().timestamp()}:{uid_str}",
                             channel=self._channel_type,
                             sender_id=from_addr,
                             content=content,
@@ -213,7 +224,7 @@ class EmailEngine(MessageEngine):
                             message_type=MessageType.TEXT,
                             metadata={
                                 "subject": subject,
-                                "email_id": email_id_bytes.decode(),
+                                "email_id": uid_str,
                                 "date": date or "",
                                 "has_html": bool(html_body),
                                 "text_preview": text_body[:500] if text_body else "",

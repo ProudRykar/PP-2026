@@ -18,6 +18,11 @@ class PollingService(ABC):
 
     @abstractmethod
     async def send_reply(
-        self, channel: str, recipient: str, content: str, subject: str | None = None
+        self,
+        channel: str,
+        recipient: str,
+        content: str,
+        subject: str | None = None,
+        **kwargs,
     ) -> str | None:
         pass

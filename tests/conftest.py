@@ -93,7 +93,12 @@ class MockPollingService(AbstractPollingService):
         pass
 
     async def send_reply(
-        self, channel: str, recipient: str, content: str, subject: str | None = None
+        self,
+        channel: str,
+        recipient: str,
+        content: str,
+        subject: str | None = None,
+        **kwargs,
     ) -> str | None:
         self._last_reply = (channel, recipient, content)
         return "mock_reply_id"

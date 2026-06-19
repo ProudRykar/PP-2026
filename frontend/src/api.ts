@@ -1,4 +1,4 @@
-import type { Message, ChannelList, ReplyPayload, HealthStatus } from './types'
+import type { Message, ChannelList, ReplyPayload, HealthStatus, UploadResult } from './types'
 
 const BASE = ''
 
@@ -38,4 +38,29 @@ export function fetchChannels(): Promise<ChannelList> {
 
 export function fetchHealth(): Promise<HealthStatus> {
   return request<HealthStatus>('/health')
+}
+
+export async function uploadFile(file: File): Promise<UploadResult> {
+  const buffer = await file.arrayBuffer()
+  const bytes = new Uint8Array(buffer)
+  let binary = ''
+  for (let i = 0; i < bytes.length; i++) {
+    binary += String.fromCharCode(bytes[i])
+  }
+  const base64 = btoa(binary)
+
+  const res = await fetch(`${BASE}/api/upload`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      file: base64,
+      filename: file.name,
+      content_type: file.type,
+    }),
+  })
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}))
+    throw new Error(body.detail ?? `HTTP ${res.status}`)
+  }
+  return res.json()
 }

@@ -15,7 +15,7 @@ export function EmailCard({ message, selected, onSelect }: EmailCardProps) {
 
   return (
     <div
-      className={`mx-4 my-2 rounded-xl border shadow-sm transition cursor-pointer ${
+      className={`my-2 rounded-xl border shadow-sm transition cursor-pointer ${
         selected ? 'border-blue-400 ring-2 ring-blue-200' : 'border-gray-200 hover:border-gray-300'
       } ${isSent ? 'ml-8 border-blue-100 bg-blue-50/30' : ''}`}
       onClick={() => onSelect(message)}
