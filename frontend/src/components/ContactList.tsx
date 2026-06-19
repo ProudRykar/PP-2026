@@ -124,8 +124,8 @@ export function ContactList({ contacts, activeKey, activeChannel, unreadCounts, 
     return (
       <div key={contact.clientId ?? contact.key}>
         <button
-          className={`flex w-full items-center gap-3 border-b border-gray-50 px-3 py-3 text-left transition hover:bg-gray-50 ${
-            activeKey === contact.key ? 'bg-blue-50' : ''
+          className={`flex w-full items-center gap-3 border-b border-gray-50 px-3 py-3 text-left transition hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-700/50 ${
+            activeKey === contact.key ? 'bg-blue-50 dark:bg-blue-900/30' : ''
           }`}
           onClick={() => {
             if (isMulti) toggleExpand(contact.key)
@@ -135,7 +135,7 @@ export function ContactList({ contacts, activeKey, activeChannel, unreadCounts, 
           {contact.avatarUrl ? (
             <img src={contact.avatarUrl} alt="" className="h-11 w-11 shrink-0 rounded-full object-cover" />
           ) : (
-            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-blue-100 text-sm font-bold text-blue-600">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-blue-100 text-sm font-bold text-blue-600 dark:bg-blue-900 dark:text-blue-300">
               {contact.name.charAt(0).toUpperCase()}
             </div>
           )}
@@ -151,14 +151,14 @@ export function ContactList({ contacts, activeKey, activeChannel, unreadCounts, 
                     {b.label}
                   </span>
                 ) : (
-                  <span key={ch.channel} className="inline-flex items-center rounded bg-gray-100 px-1.5 py-0.5 text-[10px] font-medium text-gray-600">
+                  <span key={ch.channel} className="inline-flex items-center rounded bg-gray-100 px-1.5 py-0.5 text-[10px] font-medium text-gray-600 dark:bg-gray-700 dark:text-gray-400">
                     {ch.channel}
                   </span>
                 )
               })}
             </div>
             <div className="flex items-center justify-between">
-              <span className="truncate text-sm font-medium text-gray-900">{contact.name}</span>
+              <span className="truncate text-sm font-medium text-gray-900 dark:text-gray-100">{contact.name}</span>
               <div className="flex shrink-0 items-center gap-1.5 pl-2">
                 {(() => {
                   const cnt = unreadCounts.get(contact.key) || 0
@@ -169,17 +169,17 @@ export function ContactList({ contacts, activeKey, activeChannel, unreadCounts, 
                   ) : null
                 })()}
                 {contact.lastTimestamp && (
-                  <span className="text-[10px] text-gray-400">{formatTime(contact.lastTimestamp)}</span>
+                  <span className="text-[10px] text-gray-400 dark:text-gray-500">{formatTime(contact.lastTimestamp)}</span>
                 )}
               </div>
             </div>
             <div className="mt-0.5 flex items-center gap-1.5">
-              <span className="truncate text-xs text-gray-500">{contact.lastMessage || 'Нет сообщений'}</span>
+              <span className="truncate text-xs text-gray-500 dark:text-gray-400">{contact.lastMessage || 'Нет сообщений'}</span>
             </div>
           </div>
           {isMulti && (
             <svg
-              className={`h-4 w-4 shrink-0 text-gray-400 transition-transform ${expanded ? 'rotate-90' : ''}`}
+              className={`h-4 w-4 shrink-0 text-gray-400 transition-transform dark:text-gray-500 ${expanded ? 'rotate-90' : ''}`}
               fill="none" stroke="currentColor" viewBox="0 0 24 24"
             >
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
@@ -188,20 +188,20 @@ export function ContactList({ contacts, activeKey, activeChannel, unreadCounts, 
         </button>
 
         {isMulti && expanded && (
-          <div className="border-b border-gray-50 bg-gray-50/50">
+          <div className="border-b border-gray-50 bg-gray-50/50 dark:border-gray-700 dark:bg-gray-800/50">
             {contact.channels.map((ch) => {
               const b = channelBadge[ch.channel]
               return (
                 <button
                   key={ch.channel}
-                  className={`flex w-full items-center gap-3 py-2.5 pl-14 pr-3 text-left text-sm transition hover:bg-gray-100 ${
-                    activeKey === contact.key && activeChannel === ch.channel ? 'bg-blue-50' : ''
+                  className={`flex w-full items-center gap-3 py-2.5 pl-14 pr-3 text-left text-sm transition hover:bg-gray-100 dark:hover:bg-gray-700 ${
+                    activeKey === contact.key && activeChannel === ch.channel ? 'bg-blue-50 dark:bg-blue-900/30' : ''
                   }`}
                   onClick={() => onSelect({ ...contact, channel: ch.channel, senderId: ch.senderId })}
                 >
                   <span>{channelIcons[ch.channel] || '🔗'}</span>
-                  <span className="font-medium text-gray-700">{b?.label ?? ch.channel}</span>
-                  <span className="ml-auto text-[10px] text-gray-400">{ch.channel === 'telegram' && ch.username ? `@${ch.username}` : ch.senderId}</span>
+                  <span className="font-medium text-gray-700 dark:text-gray-300">{b?.label ?? ch.channel}</span>
+                  <span className="ml-auto text-[10px] text-gray-400 dark:text-gray-500">{ch.channel === 'telegram' && ch.username ? `@${ch.username}` : ch.senderId}</span>
                 </button>
               )
             })}
@@ -212,11 +212,11 @@ export function ContactList({ contacts, activeKey, activeChannel, unreadCounts, 
   }
 
   return (
-    <div className="flex h-full flex-col border-r border-gray-200 bg-white">
-      <div className="border-b border-gray-200 px-3 py-3">
+    <div className="flex h-full flex-col border-r border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
+      <div className="border-b border-gray-200 px-3 py-3 dark:border-gray-700">
         <div className="flex items-center gap-2">
           <input
-            className="flex-1 rounded-lg bg-gray-100 px-3 py-2 text-sm outline-none transition focus:bg-gray-50 focus:ring-2 focus:ring-blue-100"
+            className="flex-1 rounded-lg bg-gray-100 px-3 py-2 text-sm outline-none transition focus:bg-gray-50 focus:ring-2 focus:ring-blue-100 dark:bg-gray-700 dark:text-gray-100 dark:focus:bg-gray-600"
             placeholder="Поиск контактов..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -226,8 +226,8 @@ export function ContactList({ contacts, activeKey, activeChannel, unreadCounts, 
               ref={btnRef}
               className={`flex h-9 w-9 items-center justify-center rounded-lg transition ${
                 hasActiveFilters
-                  ? 'bg-blue-100 text-blue-600 hover:bg-blue-200'
-                  : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                  ? 'bg-blue-100 text-blue-600 hover:bg-blue-200 dark:bg-blue-900/50 dark:text-blue-300'
+                  : 'bg-gray-100 text-gray-500 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-400 dark:hover:bg-gray-600'
               }`}
               onClick={toggleMenu}
               title="Фильтры и сортировка"
@@ -240,11 +240,11 @@ export function ContactList({ contacts, activeKey, activeChannel, unreadCounts, 
             {menuOpen && (
               <div
                 ref={menuRef}
-                className="fixed z-50 flex gap-0 rounded-lg border border-gray-200 bg-white shadow-lg"
+                className="fixed z-50 flex gap-0 rounded-lg border border-gray-200 bg-white shadow-lg dark:border-gray-600 dark:bg-gray-800"
                 style={{ top: menuPos.top, left: menuPos.left }}
               >
                 <div className="py-2">
-                  <label className="flex cursor-pointer items-center gap-2 px-3 py-1.5 text-sm text-gray-700 transition hover:bg-gray-50">
+                  <label className="flex cursor-pointer items-center gap-2 px-3 py-1.5 text-sm text-gray-700 transition hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-700">
                     <input
                       type="checkbox"
                       className="h-4 w-4 accent-blue-500"
@@ -254,14 +254,14 @@ export function ContactList({ contacts, activeKey, activeChannel, unreadCounts, 
                     Непрочитанные
                   </label>
 
-                  <div className="my-1 border-t border-gray-100" />
+                  <div className="my-1 border-t border-gray-100 dark:border-gray-700" />
 
-                  <p className="px-3 pb-1 text-[10px] font-semibold uppercase tracking-wide text-gray-400">Сортировка</p>
+                  <p className="px-3 pb-1 text-[10px] font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500">Сортировка</p>
                   {([['time_desc', 'Новые ↑'], ['time_asc', 'Старые ↓'], ['name_asc', 'А→Я'], ['name_desc', 'Я→А']] as const).map(([val, label]) => (
                     <button
                       key={val}
                       className={`flex w-full items-center gap-2 whitespace-nowrap px-3 py-1.5 text-left text-sm transition ${
-                        sortBy === val ? 'bg-blue-50 text-blue-600' : 'text-gray-700 hover:bg-gray-50'
+                        sortBy === val ? 'bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-300' : 'text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-700'
                       }`}
                       onClick={() => { setSortBy(val); setMenuOpen(false) }}
                     >
@@ -275,13 +275,13 @@ export function ContactList({ contacts, activeKey, activeChannel, unreadCounts, 
                   ))}
                 </div>
 
-                <div className="w-px bg-gray-200" />
+                <div className="w-px bg-gray-200 dark:bg-gray-700" />
 
                 <div className="py-2">
-                  <p className="px-3 pb-1 text-[10px] font-semibold uppercase tracking-wide text-gray-400">Канал</p>
+                  <p className="px-3 pb-1 text-[10px] font-semibold uppercase tracking-wide text-gray-400 dark:text-gray-500">Канал</p>
                   <button
                     className={`flex w-full items-center gap-2 whitespace-nowrap px-3 py-1.5 text-left text-sm transition ${
-                      channelFilter === null ? 'bg-blue-50 text-blue-600' : 'text-gray-700 hover:bg-gray-50'
+                      channelFilter === null ? 'bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-300' : 'text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-700'
                     }`}
                     onClick={() => { setChannelFilter(null); setMenuOpen(false) }}
                   >
@@ -296,7 +296,7 @@ export function ContactList({ contacts, activeKey, activeChannel, unreadCounts, 
                     <button
                       key={ch}
                       className={`flex w-full items-center gap-2 whitespace-nowrap px-3 py-1.5 text-left text-sm transition ${
-                        channelFilter === ch ? 'bg-blue-50 text-blue-600' : 'text-gray-700 hover:bg-gray-50'
+                        channelFilter === ch ? 'bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-300' : 'text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-700'
                       }`}
                       onClick={() => { setChannelFilter(ch); setMenuOpen(false) }}
                     >
@@ -317,7 +317,7 @@ export function ContactList({ contacts, activeKey, activeChannel, unreadCounts, 
 
       <div className="flex-1 overflow-y-auto">
         {processed.length === 0 && (
-          <p className="py-10 text-center text-xs text-gray-400">
+          <p className="py-10 text-center text-xs text-gray-400 dark:text-gray-500">
             {search ? 'Ничего не найдено' : 'Нет контактов'}
           </p>
         )}

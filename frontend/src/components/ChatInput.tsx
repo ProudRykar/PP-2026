@@ -66,9 +66,9 @@ export function ChatInput({ replyTarget, onSent }: ChatInputProps) {
   }
 
   return (
-    <div className="border-t border-gray-200 bg-white px-4 py-3">
+    <div className="border-t border-gray-200 bg-white px-4 py-3 dark:border-gray-700 dark:bg-gray-800">
       {replyTarget && (
-        <div className="mb-2 flex items-center gap-1.5 text-xs text-gray-400">
+        <div className="mb-2 flex items-center gap-1.5 text-xs text-gray-400 dark:text-gray-500">
           <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16l-4-4m0 0l4-4m-4 4h18" />
           </svg>
@@ -90,7 +90,7 @@ export function ChatInput({ replyTarget, onSent }: ChatInputProps) {
 
       <div className="flex gap-2">
         <button
-          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gray-100 text-gray-500 transition hover:bg-gray-200 disabled:opacity-40"
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gray-100 text-gray-500 transition hover:bg-gray-200 disabled:opacity-40 dark:bg-gray-700 dark:text-gray-400 dark:hover:bg-gray-600"
           onClick={() => fileInputRef.current?.click()}
           disabled={!replyTarget || sending}
           title="Прикрепить изображение"
@@ -108,14 +108,14 @@ export function ChatInput({ replyTarget, onSent }: ChatInputProps) {
         />
         <input
           ref={inputRef}
-          className="flex-1 rounded-xl border border-gray-300 px-4 py-2.5 text-sm outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+          className="flex-1 rounded-xl border border-gray-300 px-4 py-2.5 text-sm outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-100 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-100 dark:focus:border-blue-500"
           placeholder={replyTarget ? 'Напишите ответ…' : 'Выберите сообщение для ответа…'}
           value={text}
           onChange={(e) => setText(e.target.value)}
           onKeyDown={handleKeyDown}
         />
         <button
-          className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-500 text-white transition hover:bg-blue-600 disabled:opacity-40"
+          className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-500 text-white transition hover:bg-blue-600 disabled:opacity-40 dark:bg-blue-600 dark:hover:bg-blue-700"
           onClick={handleSend}
           disabled={!replyTarget || (!text.trim() && !selectedFile) || sending}
         >

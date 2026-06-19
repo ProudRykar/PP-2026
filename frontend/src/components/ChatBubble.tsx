@@ -41,7 +41,7 @@ export function ChatBubble({ message, isOwn, isFirst, isLast, senderLabel, chann
       )
     }
 
-    return <p>{message.content || <span className="italic opacity-70">Нет текста</span>}</p>
+    return <p>{message.content || <span className="italic opacity-70 dark:opacity-50">Нет текста</span>}</p>
   }
 
   const renderLightbox = () => {
@@ -74,9 +74,9 @@ export function ChatBubble({ message, isOwn, isFirst, isLast, senderLabel, chann
     >
       {isFirst && (
         <div className={`mb-1 flex items-center gap-2 ${isOwn ? 'justify-end' : ''}`}>
-          {!isOwn && <span className="text-xs font-semibold text-gray-500">{senderLabel}</span>}
-          {!isOwn && <span className="rounded bg-gray-100 px-1.5 py-0.5 text-[10px] font-medium text-gray-500">{channelLabel}</span>}
-          {isOwn && <span className="text-[10px] text-gray-400">Вы</span>}
+          {!isOwn && <span className="text-xs font-semibold text-gray-500 dark:text-gray-400">{senderLabel}</span>}
+          {!isOwn && <span className="rounded bg-gray-100 px-1.5 py-0.5 text-[10px] font-medium text-gray-500 dark:bg-gray-700 dark:text-gray-400">{channelLabel}</span>}
+          {isOwn && <span className="text-[10px] text-gray-400 dark:text-gray-500">Вы</span>}
         </div>
       )}
       <div
@@ -85,15 +85,15 @@ export function ChatBubble({ message, isOwn, isFirst, isLast, senderLabel, chann
           ${message.message_type === 'photo' && message.metadata?.file_url ? 'overflow-hidden' : ''}
           ${isFirst ? (isOwn ? 'rounded-tr-md' : 'rounded-tl-md') : ''}
           ${isLast ? (isOwn ? 'rounded-br-md' : 'rounded-bl-md') : ''}
-          ${isOwn ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-800'}
-          ${selected ? (isOwn ? 'ring-2 ring-blue-300' : 'bg-blue-100 ring-2 ring-blue-300') : ''}
-          ${isOwn ? 'hover:bg-blue-600' : 'hover:bg-gray-200'}
+          ${isOwn ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-100'}
+          ${selected ? (isOwn ? 'ring-2 ring-blue-300' : 'bg-blue-100 ring-2 ring-blue-300 dark:bg-blue-900/30') : ''}
+          ${isOwn ? 'hover:bg-blue-600' : 'hover:bg-gray-200 dark:hover:bg-gray-600'}
         `}
       >
         {renderContent()}
         <div className={`mt-0.5 flex items-center justify-end gap-1 ${isLast ? '' : 'opacity-0 group-hover:opacity-100'}`}>
-          <span className={`text-[10px] ${isOwn ? 'text-blue-200' : 'text-gray-400'}`}>{time}</span>
-          {isLast && <span className={`text-[10px] ${isOwn ? 'text-blue-200' : 'text-gray-400'}`}>{date}</span>}
+          <span className={`text-[10px] ${isOwn ? 'text-blue-200' : 'text-gray-400 dark:text-gray-500'}`}>{time}</span>
+          {isLast && <span className={`text-[10px] ${isOwn ? 'text-blue-200' : 'text-gray-400 dark:text-gray-500'}`}>{date}</span>}
         </div>
       </div>
       {renderLightbox()}

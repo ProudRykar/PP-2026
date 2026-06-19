@@ -66,10 +66,10 @@ export function MessageList({ messages, loading, selectedId, onSelect }: Message
   }, [messages])
 
   if (loading) {
-    return <p className="py-10 text-center text-gray-400">Загрузка сообщений…</p>
+    return <p className="py-10 text-center text-gray-400 dark:text-gray-500">Загрузка сообщений…</p>
   }
   if (messages.length === 0) {
-    return <p className="py-10 text-center text-gray-400">Нет сообщений</p>
+    return <p className="py-10 text-center text-gray-400 dark:text-gray-500">Нет сообщений</p>
   }
 
   const chatMessages = messages.filter(m => m.channel !== 'email')
@@ -90,10 +90,10 @@ export function MessageList({ messages, loading, selectedId, onSelect }: Message
         />
       ))}
       {emailMessages.length > 0 && (
-        <div className="mx-2 my-2 overflow-hidden rounded-xl border border-gray-200 shadow-sm">
+        <div className="mx-2 my-2 overflow-hidden rounded-xl border border-gray-200 shadow-sm dark:border-gray-700">
           <table className="w-full table-fixed text-sm">
             <thead>
-              <tr className="border-b border-gray-100 bg-gray-50 text-left text-[10px] font-semibold uppercase tracking-wide text-gray-500">
+              <tr className="border-b border-gray-100 bg-gray-50 text-left text-[10px] font-semibold uppercase tracking-wide text-gray-500 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400">
                 <th className="w-[22%] px-3 py-2">Отправитель</th>
                 <th className="w-[25%] px-3 py-2">Тема</th>
                 <th className="px-3 py-2">Содержание</th>

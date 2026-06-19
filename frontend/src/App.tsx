@@ -6,6 +6,7 @@ import { ChatInput } from './components/ChatInput'
 import { EmailReplyForm } from './components/EmailReplyForm'
 import { ClientCard } from './components/ClientCard'
 import { ContactList, type Contact, type ContactChannel } from './components/ContactList'
+import { ThemeToggle } from './components/ThemeToggle'
 import { useWebSocket } from './hooks/useWebSocket'
 
 export default function App() {
@@ -215,17 +216,20 @@ export default function App() {
     return (
       <div className="mx-auto max-w-2xl py-20 text-center">
         <p className="text-lg text-red-500">Сервер недоступен</p>
-        <p className="mt-1 text-sm text-gray-400">Проверьте, запущен ли бэкенд</p>
+        <p className="mt-1 text-sm text-gray-400 dark:text-gray-500">Проверьте, запущен ли бэкенд</p>
       </div>
     )
   }
 
   return (
-    <div className="flex h-screen bg-gray-100">
-      <div className="relative z-10 flex w-80 shrink-0 flex-col bg-white shadow-sm">
-        <div className="border-b border-gray-200 bg-gray-800 px-4 py-4 text-white">
-          <h1 className="text-lg font-bold">Омниканал</h1>
-          <p className="mt-0.5 text-xs text-gray-300">{contacts.length} контактов</p>
+    <div className="flex h-screen bg-gray-100 dark:bg-gray-950">
+      <div className="relative z-10 flex w-80 shrink-0 flex-col bg-white shadow-sm dark:bg-gray-800">
+        <div className="flex items-center justify-between border-b border-gray-200 bg-gray-800 px-4 py-4 text-white dark:border-gray-700">
+          <div>
+            <h1 className="text-lg font-bold">Омниканал</h1>
+            <p className="mt-0.5 text-xs text-gray-300">{contacts.length} контактов</p>
+          </div>
+          <ThemeToggle />
         </div>
         <div className="min-h-0 flex-1 overflow-hidden">
           <ContactList
@@ -238,11 +242,11 @@ export default function App() {
         </div>
       </div>
 
-      <div className="flex flex-1 flex-col bg-white shadow-sm">
+      <div className="flex flex-1 flex-col bg-white shadow-sm dark:bg-gray-900">
         {activeContact ? (
           <>
             {showClientCard && activeContact.clientId && (
-              <div className="border-b border-gray-200 px-4 py-2">
+              <div className="border-b border-gray-200 px-4 py-2 dark:border-gray-700">
                 <ClientCard
                   channel={activeContact.channel}
                   senderId={activeContact.senderId}
@@ -250,23 +254,23 @@ export default function App() {
                 />
               </div>
             )}
-            <div className="flex items-center justify-between border-b border-gray-200 bg-gray-50 px-4 py-2">
+            <div className="flex items-center justify-between border-b border-gray-200 bg-gray-50 px-4 py-2 dark:border-gray-700 dark:bg-gray-800">
               <div className="flex items-center gap-2">
                 {activeContact.avatarUrl ? (
                   <img src={activeContact.avatarUrl} alt="" className="h-8 w-8 rounded-full object-cover" />
                 ) : (
-                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-100 text-xs font-bold text-blue-600">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-100 text-xs font-bold text-blue-600 dark:bg-blue-900 dark:text-blue-300">
                     {activeContact.name.charAt(0).toUpperCase()}
                   </div>
                 )}
                 <div>
-                  <p className="text-sm font-semibold text-gray-800">{activeContact.name}</p>
-                  <p className="text-[10px] text-gray-400">{activeContact.channel}</p>
+                  <p className="text-sm font-semibold text-gray-800 dark:text-gray-100">{activeContact.name}</p>
+                  <p className="text-[10px] text-gray-400 dark:text-gray-500">{activeContact.channel}</p>
                 </div>
               </div>
               {activeContact.clientId && (
                 <button
-                  className="rounded-lg bg-white px-3 py-1.5 text-xs font-medium text-gray-600 shadow-sm ring-1 ring-gray-200 transition hover:bg-gray-50"
+                  className="rounded-lg bg-white px-3 py-1.5 text-xs font-medium text-gray-600 shadow-sm ring-1 ring-gray-200 transition hover:bg-gray-50 dark:bg-gray-700 dark:text-gray-300 dark:ring-gray-600 dark:hover:bg-gray-600"
                   onClick={() => setShowClientCard(!showClientCard)}
                 >
                   {showClientCard ? 'Закрыть профиль' : 'Профиль'}
@@ -290,8 +294,8 @@ export default function App() {
         ) : (
           <div className="flex flex-1 items-center justify-center">
             <div className="text-center">
-              <p className="text-lg text-gray-400">Выберите контакт</p>
-              <p className="mt-1 text-sm text-gray-300">Чтобы начать переписку</p>
+              <p className="text-lg text-gray-400 dark:text-gray-500">Выберите контакт</p>
+              <p className="mt-1 text-sm text-gray-300 dark:text-gray-500">Чтобы начать переписку</p>
             </div>
           </div>
         )}
