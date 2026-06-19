@@ -19,6 +19,7 @@ export default function App() {
 
   const [showClientCard, setShowClientCard] = useState(false)
   const [unreadCounts, setUnreadCounts] = useState<Map<string, number>>(new Map())
+  const [readMessageIds, setReadMessageIds] = useState<Set<string>>(new Set())
   const countedUnreadRef = useRef(new Set<string>())
 
   const loadAll = useCallback(async () => {
@@ -29,6 +30,7 @@ export default function App() {
         fetchAllClients(),
       ])
       setAllMessages(msgs)
+      setReadMessageIds(new Set(msgs.map(m => m.id)))
       countedUnreadRef.current = new Set(msgs.map(m => m.id))
       const map = new Map<string, Client>()
       for (const c of cls) map.set(c.id, c)
@@ -58,16 +60,25 @@ export default function App() {
         return [...prev, msg]
       })
 
-      const key = convKey(msg)
-      if (!activeContact || activeContact.key !== key) {
-        if (!countedUnreadRef.current.has(msg.id)) {
-          countedUnreadRef.current.add(msg.id)
-          setUnreadCounts(prev => {
-            const next = new Map(prev)
-            next.set(key, (next.get(key) || 0) + 1)
-            return next
-          })
+      if (msg.sender_id !== 'agent') {
+        const key = convKey(msg)
+        if (!activeContact || activeContact.key !== key) {
+          if (!countedUnreadRef.current.has(msg.id)) {
+            countedUnreadRef.current.add(msg.id)
+            setUnreadCounts(prev => {
+              const next = new Map(prev)
+              next.set(key, (next.get(key) || 0) + 1)
+              return next
+            })
+          }
         }
+      } else {
+        setReadMessageIds(prev => {
+          if (prev.has(msg.id)) return prev
+          const next = new Set(prev)
+          next.add(msg.id)
+          return next
+        })
       }
 
       fetchAllClients().then(cls => {
@@ -189,16 +200,36 @@ export default function App() {
       .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime())
   }, [activeContact, allMessages])
 
+  const markRead = useCallback((id: string) => {
+    setReadMessageIds(prev => {
+      if (prev.has(id)) return prev
+      const next = new Set(prev)
+      next.add(id)
+      return next
+    })
+  }, [])
+
   const handleSelectContact = useCallback((contact: Contact) => {
     setActiveContact(contact)
     setSelected(null)
     setShowClientCard(false)
-      setUnreadCounts(prev => {
-        const next = new Map(prev)
-        next.set(contact.key, 0)
-        return next
-      })
-      const msgs = allMessages.filter((m) => msgMatch(m, contact.channel, contact.senderId))
+    setUnreadCounts(prev => {
+      const next = new Map(prev)
+      for (const ch of contact.channels) {
+        next.set(`${ch.channel}:${ch.senderId}`, 0)
+      }
+      return next
+    })
+    setReadMessageIds(prev => {
+      const next = new Set(prev)
+      for (const m of allMessages) {
+        for (const ch of contact.channels) {
+          if (msgMatch(m, ch.channel, ch.senderId)) next.add(m.id)
+        }
+      }
+      return next
+    })
+    const msgs = allMessages.filter((m) => msgMatch(m, contact.channel, contact.senderId))
     if (msgs.length > 0) {
       const sorted = msgs.sort(
         (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
@@ -209,8 +240,9 @@ export default function App() {
 
   const handleSelectMessage = useCallback((msg: Message) => {
     setSelected(prev => prev?.id === msg.id ? null : msg)
+    markRead(msg.id)
     setShowClientCard(false)
-  }, [])
+  }, [markRead])
 
   if (!backendOk) {
     return (
@@ -254,23 +286,23 @@ export default function App() {
                 />
               </div>
             )}
-            <div className="flex items-center justify-between border-b border-gray-200 bg-gray-50 px-4 py-2 dark:border-gray-700 dark:bg-gray-800">
-              <div className="flex items-center gap-2">
+            <div className="flex items-center justify-between border-b border-gray-200 bg-gray-50 px-4 py-3 dark:border-gray-700 dark:bg-gray-800">
+              <div className="flex items-center gap-3">
                 {activeContact.avatarUrl ? (
-                  <img src={activeContact.avatarUrl} alt="" className="h-8 w-8 rounded-full object-cover" />
+                  <img src={activeContact.avatarUrl} alt="" className="h-10 w-10 rounded-full object-cover" />
                 ) : (
-                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-100 text-xs font-bold text-blue-600 dark:bg-blue-900 dark:text-blue-300">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-100 text-sm font-bold text-blue-600 dark:bg-blue-900 dark:text-blue-300">
                     {activeContact.name.charAt(0).toUpperCase()}
                   </div>
                 )}
                 <div>
-                  <p className="text-sm font-semibold text-gray-800 dark:text-gray-100">{activeContact.name}</p>
-                  <p className="text-[10px] text-gray-400 dark:text-gray-500">{activeContact.channel}</p>
+                  <p className="text-base font-semibold text-gray-800 dark:text-gray-100">{activeContact.name}</p>
+                  <p className="text-xs text-gray-400 dark:text-gray-500">{activeContact.channel}</p>
                 </div>
               </div>
               {activeContact.clientId && (
                 <button
-                  className="rounded-lg bg-white px-3 py-1.5 text-xs font-medium text-gray-600 shadow-sm ring-1 ring-gray-200 transition hover:bg-gray-50 dark:bg-gray-700 dark:text-gray-300 dark:ring-gray-600 dark:hover:bg-gray-600"
+                  className="rounded-lg bg-white px-4 py-2 text-sm font-medium text-gray-600 shadow-sm ring-1 ring-gray-200 transition hover:bg-gray-50 dark:bg-gray-700 dark:text-gray-300 dark:ring-gray-600 dark:hover:bg-gray-600"
                   onClick={() => setShowClientCard(!showClientCard)}
                 >
                   {showClientCard ? 'Закрыть профиль' : 'Профиль'}
@@ -283,6 +315,7 @@ export default function App() {
                 loading={loading}
                 selectedId={selected?.id ?? null}
                 onSelect={handleSelectMessage}
+                readMessageIds={readMessageIds}
               />
             </div>
             {selected?.channel === 'email' ? (

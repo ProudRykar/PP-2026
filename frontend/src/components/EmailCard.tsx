@@ -16,9 +16,11 @@ interface EmailCardProps {
   message: Message
   selected: boolean
   onSelect: (msg: Message) => void
+  depth?: number
+  unread?: boolean
 }
 
-export function EmailCard({ message, selected, onSelect }: EmailCardProps) {
+export function EmailCard({ message, selected, onSelect, depth = 0, unread }: EmailCardProps) {
   const time = new Date(message.timestamp).toLocaleString('ru-RU', {
     day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit',
   })
@@ -35,50 +37,59 @@ export function EmailCard({ message, selected, onSelect }: EmailCardProps) {
   const toField = isSent
     ? message.recipient
     : (typeof message.metadata?.to === 'string' ? message.metadata.to : message.recipient) || '—'
+  const hasBorder = depth === 0
 
   return (
-    <>
-      <tr
-        className={`cursor-pointer border-b border-gray-50 transition hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-700/50 ${
-          selected ? 'bg-blue-50 dark:bg-blue-900/30' : ''
-        }`}
+    <div>
+      <div
+        className={`flex cursor-pointer items-center gap-2 transition hover:bg-gray-50 dark:hover:bg-gray-700/50 ${
+          hasBorder ? 'border-b border-gray-50 dark:border-gray-700' : ''
+        } ${selected ? 'bg-blue-50 dark:bg-blue-900/30' : ''} ${unread ? 'bg-blue-50/40 dark:bg-blue-900/20' : ''}`}
         onClick={() => onSelect(message)}
       >
-        <td className="truncate px-3 py-2.5 text-xs font-medium text-gray-700 dark:text-gray-300">{senderName}</td>
-        <td className="truncate px-3 py-2.5 text-xs font-medium text-gray-800 dark:text-gray-100">{subject}</td>
-        <td className="truncate px-3 py-2.5 text-xs text-gray-500 dark:text-gray-400">{preview || <span className="italic text-gray-300 dark:text-gray-600">(пусто)</span>}</td>
-        <td className="whitespace-nowrap px-3 py-2.5 text-right text-[10px] text-gray-400 dark:text-gray-500">{time}</td>
-      </tr>
+        {unread && <div className="ml-2 h-2 w-2 shrink-0 rounded-full bg-blue-500" />}
+        <div className="flex min-w-0 flex-1 items-center gap-2 px-1 py-2.5">
+          <span className={`truncate text-xs ${
+            unread ? 'font-semibold' : 'font-medium'
+          } ${depth > 0 ? 'pl-4 text-gray-400 dark:text-gray-500' : 'text-gray-700 dark:text-gray-300'}`}>
+            {depth > 0 && <span className="mr-1 select-none">└</span>}
+            {depth > 0 ? 'agent' : senderName}
+          </span>
+          <span className={`truncate text-xs ${unread ? 'font-semibold' : 'font-medium'} text-gray-800 dark:text-gray-100`}>{subject}</span>
+          <span className="hidden truncate text-xs text-gray-500 sm:inline dark:text-gray-400">
+            {preview || <span className="italic text-gray-300 dark:text-gray-600">(пусто)</span>}
+          </span>
+        </div>
+        <span className="shrink-0 px-3 text-[10px] text-gray-400 dark:text-gray-500">{time}</span>
+      </div>
       {selected && (
-        <tr className="border-b border-gray-100 dark:border-gray-700">
-          <td colSpan={4} className="bg-white px-4 py-3 dark:bg-gray-800">
-            <div className="mb-3 space-y-1 border-b border-gray-100 pb-3 text-xs text-gray-600 dark:border-gray-700 dark:text-gray-400">
-              <div className="flex gap-2">
-                <span className="w-14 shrink-0 font-medium text-gray-400 dark:text-gray-500">От:</span>
-                <span>{senderName} {senderEmail !== senderName ? `<${senderEmail}>` : ''}</span>
-              </div>
-              <div className="flex gap-2">
-                <span className="w-14 shrink-0 font-medium text-gray-400 dark:text-gray-500">Кому:</span>
-                <span>{toField}</span>
-              </div>
-              <div className="flex gap-2">
-                <span className="w-14 shrink-0 font-medium text-gray-400 dark:text-gray-500">Тема:</span>
-                <span className="font-medium text-gray-800 dark:text-gray-100">{subject}</span>
-              </div>
-              <div className="flex gap-2">
-                <span className="w-14 shrink-0 font-medium text-gray-400 dark:text-gray-500">Дата:</span>
-                <span>{time}</span>
-              </div>
+        <div className="border-b border-gray-100 bg-white px-4 py-3 dark:border-gray-700 dark:bg-gray-800">
+          <div className="mb-3 space-y-1.5 border-b border-gray-100 pb-3 text-sm text-gray-600 dark:border-gray-700 dark:text-gray-400">
+            <div className="flex gap-2">
+              <span className="w-16 shrink-0 font-medium text-gray-400 dark:text-gray-500">От:</span>
+              <span>{senderName} {senderEmail !== senderName ? `<${senderEmail}>` : ''}</span>
             </div>
-            {hasHtml ? <HtmlEmailBody content={message.content} /> : (
-              <div className="max-h-96 overflow-y-auto whitespace-pre-wrap text-sm text-gray-700 dark:text-gray-300">
-                {message.content || <span className="italic text-gray-400 dark:text-gray-500">(пусто)</span>}
-              </div>
-            )}
-          </td>
-        </tr>
+            <div className="flex gap-2">
+              <span className="w-16 shrink-0 font-medium text-gray-400 dark:text-gray-500">Кому:</span>
+              <span>{toField}</span>
+            </div>
+            <div className="flex gap-2">
+              <span className="w-16 shrink-0 font-medium text-gray-400 dark:text-gray-500">Тема:</span>
+              <span className="font-medium text-gray-800 dark:text-gray-100">{subject}</span>
+            </div>
+            <div className="flex gap-2">
+              <span className="w-16 shrink-0 font-medium text-gray-400 dark:text-gray-500">Дата:</span>
+              <span>{time}</span>
+            </div>
+          </div>
+          {hasHtml ? <HtmlEmailBody content={message.content} /> : (
+            <div className="max-h-96 overflow-y-auto whitespace-pre-wrap text-base text-gray-700 dark:text-gray-300">
+              {message.content || <span className="italic text-gray-400 dark:text-gray-500">(пусто)</span>}
+            </div>
+          )}
+        </div>
       )}
-    </>
+    </div>
   )
 }
 

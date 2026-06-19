@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
 
 export interface ContactChannel {
   channel: string
@@ -24,6 +24,14 @@ interface ContactListProps {
   activeChannel: string | null
   unreadCounts: Map<string, number>
   onSelect: (contact: Contact) => void
+}
+
+function totalUnread(contact: Contact, counts: Map<string, number>): number {
+  let total = 0
+  for (const ch of contact.channels) {
+    total += counts.get(`${ch.channel}:${ch.senderId}`) || 0
+  }
+  return total
 }
 
 const channelIcons: Record<string, string> = {
@@ -101,13 +109,15 @@ export function ContactList({ contacts, activeKey, activeChannel, unreadCounts, 
 
   const hasActiveFilters = unreadOnly || channelFilter !== null || sortBy !== 'time_desc'
 
+  const unreadTotal = useCallback((c: Contact) => totalUnread(c, unreadCounts), [unreadCounts])
+
   const processed = contacts
     .filter(c => !search || c.name.toLowerCase().includes(search.toLowerCase()))
-    .filter(c => !unreadOnly || (unreadCounts.get(c.key) || 0) > 0)
+    .filter(c => !unreadOnly || unreadTotal(c) > 0)
     .filter(c => !channelFilter || c.channels.some(ch => ch.channel === channelFilter))
     .sort((a, b) => {
-      const aUnread = (unreadCounts.get(a.key) || 0) > 0
-      const bUnread = (unreadCounts.get(b.key) || 0) > 0
+      const aUnread = unreadTotal(a) > 0
+      const bUnread = unreadTotal(b) > 0
       if (aUnread !== bUnread) return aUnread ? -1 : 1
       switch (sortBy) {
         case 'time_asc': return new Date(a.lastTimestamp).getTime() - new Date(b.lastTimestamp).getTime()
@@ -161,7 +171,7 @@ export function ContactList({ contacts, activeKey, activeChannel, unreadCounts, 
               <span className="truncate text-sm font-medium text-gray-900 dark:text-gray-100">{contact.name}</span>
               <div className="flex shrink-0 items-center gap-1.5 pl-2">
                 {(() => {
-                  const cnt = unreadCounts.get(contact.key) || 0
+                  const cnt = totalUnread(contact, unreadCounts)
                   return cnt > 0 ? (
                     <span className="flex h-5 min-w-[20px] items-center justify-center rounded-full bg-blue-500 px-1.5 text-[10px] font-bold text-white">
                       {cnt > 99 ? '99+' : cnt}
@@ -201,6 +211,14 @@ export function ContactList({ contacts, activeKey, activeChannel, unreadCounts, 
                 >
                   <span>{channelIcons[ch.channel] || '🔗'}</span>
                   <span className="font-medium text-gray-700 dark:text-gray-300">{b?.label ?? ch.channel}</span>
+                  {(() => {
+                    const chCnt = unreadCounts.get(`${ch.channel}:${ch.senderId}`) || 0
+                    return chCnt > 0 ? (
+                      <span className="flex h-4 min-w-[16px] items-center justify-center rounded-full bg-blue-500 px-1 text-[9px] font-bold text-white">
+                        {chCnt > 99 ? '99+' : chCnt}
+                      </span>
+                    ) : null
+                  })()}
                   <span className="ml-auto text-[10px] text-gray-400 dark:text-gray-500">{ch.channel === 'telegram' && ch.username ? `@${ch.username}` : ch.senderId}</span>
                 </button>
               )

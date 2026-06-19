@@ -8,6 +8,7 @@ interface MessageListProps {
   loading: boolean
   selectedId: string | null
   onSelect: (msg: Message) => void
+  readMessageIds?: Set<string>
 }
 
 function groupBySender(messages: Message[]): Message[][] {
@@ -34,7 +35,28 @@ function channelLabel(msg: Message): string {
   return msg.channel.charAt(0).toUpperCase() + msg.channel.slice(1)
 }
 
-export function MessageList({ messages, loading, selectedId, onSelect }: MessageListProps) {
+function buildEmailThreads(messages: Message[]): Message[][] {
+  const sorted = [...messages].sort(
+    (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+  )
+  const children = new Map<string, Message[]>()
+  const roots: Message[] = []
+  const ids = new Set(sorted.map(m => m.id))
+
+  for (const msg of sorted) {
+    if (msg.parent_id && ids.has(msg.parent_id)) {
+      const list = children.get(msg.parent_id) ?? []
+      list.push(msg)
+      children.set(msg.parent_id, list)
+    } else {
+      roots.push(msg)
+    }
+  }
+
+  return roots.map(root => [root, ...(children.get(root.id) ?? [])])
+}
+
+export function MessageList({ messages, loading, selectedId, onSelect, readMessageIds }: MessageListProps) {
   const bottomRef = useRef<HTMLDivElement>(null)
   const isNearBottomRef = useRef(true)
 
@@ -76,6 +98,7 @@ export function MessageList({ messages, loading, selectedId, onSelect }: Message
   const emailMessages = messages.filter(m => m.channel === 'email')
 
   const chatGroups = groupBySender(chatMessages)
+  const emailThreads = buildEmailThreads(emailMessages)
 
   return (
     <div className="flex flex-col pb-4">
@@ -89,28 +112,25 @@ export function MessageList({ messages, loading, selectedId, onSelect }: Message
           onSelect={onSelect}
         />
       ))}
-      {emailMessages.length > 0 && (
-        <div className="mx-2 my-2 overflow-hidden rounded-xl border border-gray-200 shadow-sm dark:border-gray-700">
-          <table className="w-full table-fixed text-sm">
-            <thead>
-              <tr className="border-b border-gray-100 bg-gray-50 text-left text-[10px] font-semibold uppercase tracking-wide text-gray-500 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400">
-                <th className="w-[22%] px-3 py-2">Отправитель</th>
-                <th className="w-[25%] px-3 py-2">Тема</th>
-                <th className="px-3 py-2">Содержание</th>
-                <th className="w-[18%] px-3 py-2 text-right">Время</th>
-              </tr>
-            </thead>
-            <tbody>
-              {emailMessages.map(msg => (
+      {emailThreads.length > 0 && (
+        <div className="mx-2 my-2 space-y-2">
+          {emailThreads.map((thread, ti) => (
+            <div
+              key={`thread-${ti}`}
+              className="overflow-hidden rounded-xl border border-gray-200 shadow-sm dark:border-gray-700"
+            >
+              {thread.map((msg, mi) => (
                 <EmailCard
                   key={msg.id}
                   message={msg}
                   selected={selectedId === msg.id}
                   onSelect={onSelect}
+                  depth={mi}
+                  unread={!readMessageIds?.has(msg.id)}
                 />
               ))}
-            </tbody>
-          </table>
+            </div>
+          ))}
         </div>
       )}
       <div ref={bottomRef} />
