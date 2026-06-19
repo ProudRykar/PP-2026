@@ -3,7 +3,8 @@ import asyncio
 import io
 from typing import AsyncGenerator
 
-from telegram import Bot
+import aiohttp
+from telegram import Bot, InputFile
 from telegram.ext import Application, MessageHandler, filters
 
 from app.core.ports.message_engine import MessageEngine
@@ -42,7 +43,19 @@ class TelegramEngine(MessageEngine):
 
     async def send_message(self, recipient: str, content: str, **kwargs) -> str:
         bot = Bot(self._token)
-        sent = await bot.send_message(chat_id=recipient, text=content)
+        file_url = kwargs.get("file_url") or kwargs.get("photo")
+        if file_url:
+            async with aiohttp.ClientSession() as session:
+                async with session.get(file_url) as resp:
+                    resp.raise_for_status()
+                    file_bytes = await resp.read()
+            sent = await bot.send_photo(
+                chat_id=recipient,
+                photo=InputFile(file_bytes, filename="photo.jpg"),
+                caption=content or None,
+            )
+        else:
+            sent = await bot.send_message(chat_id=recipient, text=content)
         return str(sent.message_id)
 
     async def get_incoming(self) -> AsyncGenerator[Message, None]:
@@ -61,12 +74,63 @@ class TelegramEngine(MessageEngine):
     def is_running(self) -> bool:
         return self._running
 
+    async def _upload_photo_to_s3(self, msg) -> str | None:
+        if not self._s3 or not msg.photo:
+            return None
+        try:
+            best_photo = msg.photo[-1]
+            file = await best_photo.get_file()
+
+            buf = io.BytesIO()
+            await file.download_to_memory(buf)
+            buf.seek(0)
+
+            object_name = f"photos/{file.file_id}.jpg"
+            self._s3.put_object(
+                object_name=object_name,
+                data=buf,
+                size=buf.getbuffer().nbytes,
+                content_type="image/jpeg",
+            )
+            return self._s3.generate_presigned_url(object_name, expiration=86400)
+        except Exception as e:
+            logger.error(f"Failed to upload photo to S3: {e}")
+            return None
+
+    async def _upload_sticker_to_s3(self, msg) -> str | None:
+        if not self._s3 or not msg.sticker:
+            return None
+        try:
+            file = await msg.sticker.get_file()
+
+            if msg.sticker.is_video:
+                ext, content_type = ".webm", "video/webm"
+            elif msg.sticker.is_animated:
+                ext, content_type = ".tgs", "application/gzip"
+            else:
+                ext, content_type = ".webp", "image/webp"
+
+            buf = io.BytesIO()
+            await file.download_to_memory(buf)
+            buf.seek(0)
+
+            object_name = f"stickers/{msg.sticker.file_id}{ext}"
+            self._s3.put_object(
+                object_name=object_name,
+                data=buf,
+                size=buf.getbuffer().nbytes,
+                content_type=content_type,
+            )
+            return self._s3.generate_presigned_url(object_name, expiration=86400)
+        except Exception as e:
+            logger.error(f"Failed to upload sticker to S3: {e}")
+            return None
+
     async def _handle_message(self, update, context) -> None:
         if not update.message:
             return
 
         msg = update.message
-
         content = msg.text or msg.caption or ""
 
         message_type = MessageType.TEXT
@@ -75,6 +139,11 @@ class TelegramEngine(MessageEngine):
         if msg.photo:
             media_type = "photo"
             message_type = MessageType.PHOTO
+            file_url = await self._upload_photo_to_s3(msg)
+        elif msg.sticker:
+            media_type = "sticker"
+            message_type = MessageType.STICKER
+            file_url = await self._upload_sticker_to_s3(msg)
         elif msg.document:
             media_type = "document"
             message_type = MessageType.DOCUMENT
@@ -87,39 +156,6 @@ class TelegramEngine(MessageEngine):
         elif msg.voice:
             media_type = "voice"
             message_type = MessageType.VOICE
-        elif msg.sticker:
-            media_type = "sticker"
-            message_type = MessageType.STICKER
-            if self._s3:
-                try:
-                    file = await msg.sticker.get_file()
-
-                    if msg.sticker.is_video:
-                        ext = ".webm"
-                        content_type = "video/webm"
-                    elif msg.sticker.is_animated:
-                        ext = ".tgs"
-                        content_type = "application/gzip"
-                    else:
-                        ext = ".webp"
-                        content_type = "image/webp"
-
-                    buf = io.BytesIO()
-                    await file.download_to_memory(buf)
-                    buf.seek(0)
-
-                    object_name = f"stickers/{msg.sticker.file_id}{ext}"
-                    self._s3.put_object(
-                        object_name=object_name,
-                        data=buf,
-                        size=buf.getbuffer().nbytes,
-                        content_type=content_type,
-                    )
-                    file_url = self._s3.generate_presigned_url(
-                        object_name, expiration=86400
-                    )
-                except Exception as e:
-                    logger.error(f"Failed to upload sticker to S3: {e}")
 
         if not content and media_type:
             content = f"[{media_type}]"

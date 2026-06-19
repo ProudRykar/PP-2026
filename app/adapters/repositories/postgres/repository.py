@@ -34,6 +34,7 @@ class PostgresMessageRepository(MessageRepository):
                 content=message.content,
                 message_type=message.message_type.value,
                 subject=message.subject,
+                parent_id=message.parent_id,
                 timestamp=message.timestamp,
                 metadata_=message.metadata,
             )
@@ -71,7 +72,10 @@ class PostgresMessageRepository(MessageRepository):
             recipient=cast(Optional[str], m.recipient),
             content=cast(str, m.content),
             subject=cast(Optional[str], m.subject),
+            parent_id=cast(Optional[str], m.parent_id),
             timestamp=cast(datetime, m.timestamp),
-            message_type=MessageType(m.message_type) if m.message_type else MessageType.TEXT,
+            message_type=MessageType(m.message_type)
+            if m.message_type
+            else MessageType.TEXT,
             metadata=cast(Dict[str, Any], m.metadata_ if m.metadata_ else {}),
         )

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import pako from 'pako'
 import '@dotlottie/player-component'
+import { normalizeFileUrl } from '../utils'
 
 interface StickerRendererProps {
   metadata: Record<string, unknown>
@@ -10,7 +11,7 @@ export function StickerRenderer({ metadata }: StickerRendererProps) {
   const url = metadata.file_url as string | undefined
   if (!url) return null
 
-  const displayUrl = url.replace('http://minio:9000', 'http://localhost:9000')
+  const displayUrl = normalizeFileUrl(url)
 
   if (url.split('?')[0].endsWith('.webm')) {
     return (

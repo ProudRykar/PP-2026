@@ -1,5 +1,6 @@
 import type { Message } from '../types'
 import { StickerRenderer } from './StickerRenderer'
+import { normalizeFileUrl } from '../utils'
 
 interface ChatBubbleProps {
   message: Message
@@ -16,6 +17,30 @@ export function ChatBubble({ message, isOwn, isFirst, isLast, senderLabel, chann
   const time = new Date(message.timestamp).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })
   const date = new Date(message.timestamp).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' })
 
+  const renderContent = () => {
+    if (message.message_type === 'sticker' && message.metadata?.file_url) {
+      return <StickerRenderer metadata={message.metadata} />
+    }
+
+    if (message.message_type === 'photo' && message.metadata?.file_url) {
+      return (
+        <div className="-mx-3.5 -mt-2 mb-1">
+          <img
+            src={normalizeFileUrl(message.metadata.file_url as string)}
+            alt="photo"
+            className="w-full max-w-[400px] rounded-t-2xl object-cover"
+            loading="lazy"
+          />
+          {message.content && message.content !== '[photo]' && (
+            <p className="px-3.5 pt-2">{message.content}</p>
+          )}
+        </div>
+      )
+    }
+
+    return <p>{message.content || <span className="italic opacity-70">Нет текста</span>}</p>
+  }
+
   return (
     <div
       className={`group relative max-w-[75%] ${isFirst ? 'mt-4' : 'mt-0.5'} ${selected ? 'opacity-100' : ''}`}
@@ -31,6 +56,7 @@ export function ChatBubble({ message, isOwn, isFirst, isLast, senderLabel, chann
       <div
         className={`
           relative rounded-2xl px-3.5 py-2 text-sm leading-relaxed transition cursor-pointer
+          ${message.message_type === 'photo' && message.metadata?.file_url ? 'overflow-hidden' : ''}
           ${isFirst ? (isOwn ? 'rounded-tr-md' : 'rounded-tl-md') : ''}
           ${isLast ? (isOwn ? 'rounded-br-md' : 'rounded-bl-md') : ''}
           ${isOwn ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-800'}
@@ -38,11 +64,7 @@ export function ChatBubble({ message, isOwn, isFirst, isLast, senderLabel, chann
           ${isOwn ? 'hover:bg-blue-600' : 'hover:bg-gray-200'}
         `}
       >
-        {message.message_type === 'sticker' && message.metadata?.file_url ? (
-          <StickerRenderer metadata={message.metadata} />
-        ) : (
-          <p>{message.content || <span className="italic opacity-70">Нет текста</span>}</p>
-        )}
+        {renderContent()}
         <div className={`mt-0.5 flex items-center justify-end gap-1 ${isLast ? '' : 'opacity-0 group-hover:opacity-100'}`}>
           <span className={`text-[10px] ${isOwn ? 'text-blue-200' : 'text-gray-400'}`}>{time}</span>
           {isLast && <span className={`text-[10px] ${isOwn ? 'text-blue-200' : 'text-gray-400'}`}>{date}</span>}

@@ -14,7 +14,7 @@ class MessageResponse:
     recipient: Optional[str] = None
     subject: Optional[str] = None
     message_type: str = "text"
-
+    parent_id: Optional[str] = None
 
 
 @dataclass(slots=True)
@@ -22,4 +22,4 @@ class ReplyRequest:
     message_id: str
     content: str
     subject: Optional[str] = None
-
+    file_url: Optional[str] = None
