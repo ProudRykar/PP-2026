@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react'
 import type { Message } from '../types'
 import { ChatGroup } from './ChatGroup'
 import { EmailCard } from './EmailCard'
@@ -34,6 +35,36 @@ function channelLabel(msg: Message): string {
 }
 
 export function MessageList({ messages, loading, selectedId, onSelect }: MessageListProps) {
+  const bottomRef = useRef<HTMLDivElement>(null)
+  const isNearBottomRef = useRef(true)
+
+  useEffect(() => {
+    const el = bottomRef.current
+    if (!el) return
+    let parent = el.parentElement
+    while (parent) {
+      const style = getComputedStyle(parent)
+      if (style.overflowY === 'auto' || style.overflowY === 'scroll') break
+      parent = parent.parentElement
+    }
+    if (!parent) return
+
+    const handleScroll = () => {
+      const { scrollTop, scrollHeight, clientHeight } = parent
+      isNearBottomRef.current = scrollHeight - scrollTop - clientHeight < 150
+    }
+
+    parent.addEventListener('scroll', handleScroll, { passive: true })
+    handleScroll()
+    return () => parent.removeEventListener('scroll', handleScroll)
+  }, [])
+
+  useEffect(() => {
+    if (isNearBottomRef.current) {
+      bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
+    }
+  }, [messages])
+
   if (loading) {
     return <p className="py-10 text-center text-gray-400">Загрузка сообщений…</p>
   }
@@ -41,9 +72,8 @@ export function MessageList({ messages, loading, selectedId, onSelect }: Message
     return <p className="py-10 text-center text-gray-400">Нет сообщений</p>
   }
 
-  const reversed = [...messages].reverse()
-  const chatMessages = reversed.filter(m => m.channel !== 'email')
-  const emailMessages = reversed.filter(m => m.channel === 'email')
+  const chatMessages = messages.filter(m => m.channel !== 'email')
+  const emailMessages = messages.filter(m => m.channel === 'email')
 
   const chatGroups = groupBySender(chatMessages)
 
@@ -59,14 +89,31 @@ export function MessageList({ messages, loading, selectedId, onSelect }: Message
           onSelect={onSelect}
         />
       ))}
-      {emailMessages.map(msg => (
-        <EmailCard
-          key={msg.id}
-          message={msg}
-          selected={selectedId === msg.id}
-          onSelect={onSelect}
-        />
-      ))}
+      {emailMessages.length > 0 && (
+        <div className="mx-2 my-2 overflow-hidden rounded-xl border border-gray-200 shadow-sm">
+          <table className="w-full table-fixed text-sm">
+            <thead>
+              <tr className="border-b border-gray-100 bg-gray-50 text-left text-[10px] font-semibold uppercase tracking-wide text-gray-500">
+                <th className="w-[22%] px-3 py-2">Отправитель</th>
+                <th className="w-[25%] px-3 py-2">Тема</th>
+                <th className="px-3 py-2">Содержание</th>
+                <th className="w-[18%] px-3 py-2 text-right">Время</th>
+              </tr>
+            </thead>
+            <tbody>
+              {emailMessages.map(msg => (
+                <EmailCard
+                  key={msg.id}
+                  message={msg}
+                  selected={selectedId === msg.id}
+                  onSelect={onSelect}
+                />
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+      <div ref={bottomRef} />
     </div>
   )
 }

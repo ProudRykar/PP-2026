@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import AsyncIterator, Optional, List
 from dataclasses import dataclass, field
 
@@ -7,7 +7,9 @@ from app.core.ports.polling_service import (
 )
 from app.core.domain.models.message import Message
 from app.core.domain.models.channel_type import ChannelType
+from app.core.domain.models.client import Client, ChannelIdentity
 from app.core.ports.message_repository import MessageRepository
+from app.core.ports.client_repository import ClientRepository
 from app.core.services.message_service import MessageService
 
 
@@ -19,11 +21,17 @@ class MockMessageRepository(MessageRepository):
         self._messages[message.id] = message
 
     async def get_messages(
-        self, channel: Optional[str] = None, limit: int = 100, offset: int = 0
+        self,
+        channel: Optional[str] = None,
+        sender_id: Optional[str] = None,
+        limit: int = 100,
+        offset: int = 0,
     ) -> List[Message]:
         msgs = list(self._messages.values())
         if channel:
             msgs = [m for m in msgs if m.channel == channel]
+        if sender_id:
+            msgs = [m for m in msgs if m.sender_id == sender_id]
         return msgs[offset : offset + limit]
 
     async def get_message_by_id(self, message_id: str) -> Optional[Message]:
@@ -108,3 +116,60 @@ def make_message_service(
     repo: Optional[MockMessageRepository] = None,
 ) -> MessageService:
     return MessageService(repo or MockMessageRepository())
+
+
+@dataclass
+class MockClientRepository(ClientRepository):
+    _clients: dict[str, Client] = field(default_factory=dict)
+
+    async def save(self, client: Client) -> None:
+        self._clients[client.id] = client
+
+    async def get_by_id(self, client_id: str) -> Optional[Client]:
+        return self._clients.get(client_id)
+
+    async def find_by_channel(self, channel: str, external_id: str) -> Optional[Client]:
+        for client in self._clients.values():
+            for ch in client.channels:
+                if ch.channel == channel and ch.external_id == external_id:
+                    return client
+        return None
+
+    async def find_by_email(self, email: str) -> Optional[Client]:
+        for client in self._clients.values():
+            if client.email == email:
+                return client
+            for ch in client.channels:
+                if ch.channel == "email" and ch.external_id == email:
+                    return client
+        return None
+
+    async def update(self, client: Client) -> None:
+        self._clients[client.id] = client
+
+    async def get_all(self) -> list[Client]:
+        return list(self._clients.values())
+
+
+def make_client(
+    client_id: str = "client:test",
+    name: str = "Test Client",
+    channels: Optional[list[ChannelIdentity]] = None,
+    **kwargs,
+) -> Client:
+    return Client(
+        id=client_id,
+        name=name,
+        channels=channels
+        or [
+            ChannelIdentity(
+                channel="telegram",
+                external_id="12345",
+                username="testuser",
+                display_name="Test",
+            ),
+        ],
+        created_at=kwargs.pop("created_at", datetime.now(timezone.utc)),
+        last_interaction=kwargs.pop("last_interaction", datetime.now(timezone.utc)),
+        **kwargs,
+    )

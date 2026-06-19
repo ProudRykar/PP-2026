@@ -42,13 +42,19 @@ class PostgresMessageRepository(MessageRepository):
             logger.debug(f"Message saved: {message.id}")
 
     async def get_messages(
-        self, channel: Optional[str] = None, limit: int = 100, offset: int = 0
+        self,
+        channel: Optional[str] = None,
+        sender_id: Optional[str] = None,
+        limit: int = 100,
+        offset: int = 0,
     ) -> List[Message]:
         async with self._db.get_session() as session:
             query = select(MessageModel).order_by(desc(MessageModel.timestamp))
 
             if channel:
                 query = query.where(MessageModel.channel == channel)
+            if sender_id:
+                query = query.where(MessageModel.sender_id == sender_id)
 
             query = query.limit(limit).offset(offset)
             result = await session.execute(query)
@@ -74,7 +80,7 @@ class PostgresMessageRepository(MessageRepository):
             subject=cast(Optional[str], m.subject),
             parent_id=cast(Optional[str], m.parent_id),
             timestamp=cast(datetime, m.timestamp),
-            message_type=MessageType(m.message_type)
+            message_type=MessageType(cast(str, m.message_type))
             if m.message_type
             else MessageType.TEXT,
             metadata=cast(Dict[str, Any], m.metadata_ if m.metadata_ else {}),

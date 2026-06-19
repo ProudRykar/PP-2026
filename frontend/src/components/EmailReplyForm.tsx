@@ -8,10 +8,12 @@ interface EmailReplyFormProps {
 }
 
 export function EmailReplyForm({ replyTarget, onSent }: EmailReplyFormProps) {
-  const [to, setTo] = useState(replyTarget.sender_id)
-  const [subject, setSubject] = useState(
-    replyTarget.subject ? `Re: ${replyTarget.subject}` : ''
-  )
+  const extractEmail = (raw: string) => {
+    const m = raw.match(/<([^>]+)>/)
+    return m ? m[1] : raw
+  }
+  const [to, setTo] = useState(extractEmail(replyTarget.sender_id))
+  const [subject, setSubject] = useState(replyTarget.subject || '')
   const [body, setBody] = useState('')
   const [sending, setSending] = useState(false)
   const bodyRef = useRef<HTMLTextAreaElement>(null)
@@ -21,8 +23,8 @@ export function EmailReplyForm({ replyTarget, onSent }: EmailReplyFormProps) {
   }, [replyTarget.id])
 
   useEffect(() => {
-    setTo(replyTarget.sender_id)
-    setSubject(replyTarget.subject ? `Re: ${replyTarget.subject}` : '')
+    setTo(extractEmail(replyTarget.sender_id))
+    setSubject(replyTarget.subject || '')
     setBody('')
   }, [replyTarget.id, replyTarget.sender_id, replyTarget.subject])
 

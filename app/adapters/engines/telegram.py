@@ -1,7 +1,7 @@
 import logging
 import asyncio
 import io
-from typing import AsyncGenerator
+from typing import AsyncGenerator, Optional
 
 import aiohttp
 from telegram import Bot, InputFile
@@ -19,7 +19,7 @@ class TelegramEngine(MessageEngine):
     def __init__(self, token: str, s3: S3Interface | None = None):
         self._token = token
         self._s3 = s3
-        self._app: Application = None
+        self._app: Optional[Application] = None
         self._running = False
         self._channel_type = ChannelType.TELEGRAM
         self._queue: asyncio.Queue[Message] = asyncio.Queue()
@@ -29,12 +29,13 @@ class TelegramEngine(MessageEngine):
         self._app.add_handler(MessageHandler(filters.ALL, self._handle_message))
         await self._app.initialize()
         await self._app.start()
+        assert self._app is not None and self._app.updater is not None
         await self._app.updater.start_polling()
         self._running = True
         logger.info("Telegram engine started")
 
     async def stop(self) -> None:
-        if self._app:
+        if self._app is not None and self._app.updater is not None:
             await self._app.updater.stop()
             await self._app.stop()
             await self._app.shutdown()

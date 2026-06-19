@@ -16,10 +16,14 @@ class MessageService:
         logger.info(f"Message saved: {message.id}")
 
     async def get_messages(
-        self, channel: Optional[str] = None, limit: int = 100, offset: int = 0
+        self,
+        channel: Optional[str] = None,
+        sender_id: Optional[str] = None,
+        limit: int = 100,
+        offset: int = 0,
     ) -> List[Message]:
         return await self._repository.get_messages(
-            channel=channel, limit=limit, offset=offset
+            channel=channel, sender_id=sender_id, limit=limit, offset=offset
         )
 
     async def get_message(self, message_id: str) -> Optional[Message]:

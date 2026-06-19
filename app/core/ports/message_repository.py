@@ -11,7 +11,11 @@ class MessageRepository(ABC):
 
     @abstractmethod
     async def get_messages(
-        self, channel: Optional[str] = None, limit: int = 100, offset: int = 0
+        self,
+        channel: Optional[str] = None,
+        sender_id: Optional[str] = None,
+        limit: int = 100,
+        offset: int = 0,
     ) -> list[Message]:
         pass
 

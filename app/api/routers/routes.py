@@ -47,11 +47,14 @@ class MessageController(Controller):
         channel: str | None = Parameter(
             default=None, description="Filter by channel type"
         ),
+        sender_id: str | None = Parameter(
+            default=None, description="Filter by sender ID"
+        ),
         limit: int = Parameter(default=100, ge=1, le=1000),
         offset: int = Parameter(default=0, ge=0),
     ) -> list[MessageResponse]:
         messages = await service.get_messages(
-            channel=channel, limit=limit, offset=offset
+            channel=channel, sender_id=sender_id, limit=limit, offset=offset
         )
         return [_to_response(msg) for msg in messages]
 
@@ -107,9 +110,15 @@ class MessageController(Controller):
     ) -> dict:
         original = await service.reply_to_message(data.message_id, data.content)
 
-        reply_subject = (
-            data.subject or f"Re: {original.subject}" if original.subject else None
-        )
+        reply_subject = data.subject or original.subject or None
+
+        import re
+
+        sender_id = original.sender_id
+        if original.channel == "email":
+            match = re.search(r"<([^>]+)>", sender_id)
+            if match:
+                sender_id = match.group(1)
 
         metadata: dict = {
             "has_html": False,
@@ -122,11 +131,10 @@ class MessageController(Controller):
             metadata["file_url"] = data.file_url
             message_type = "photo"
 
-        real_recipient = (
-            original.recipient or original.sender_id
-            if original.sender_id == "agent"
-            else original.sender_id
-        )
+        if original.sender_id == "agent":
+            real_recipient = original.recipient or sender_id
+        else:
+            real_recipient = sender_id
 
         reply = Message(
             id=f"reply:{uuid.uuid4().hex}",
