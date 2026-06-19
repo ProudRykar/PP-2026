@@ -3,7 +3,7 @@
 
 import io
 
-from boto3 import client
+import boto3
 from botocore.exceptions import ClientError
 
 from app.core.ports.s3 import S3Interface
@@ -31,7 +31,7 @@ class MinioGateway(S3Interface):
 
     def connect(self) -> None:
         """Устанавливает соединение с MiniO."""
-        self._client = client(
+        self._client = boto3.client(
             "s3",
             endpoint_url=self._endpoint,
             aws_access_key_id=self._access_key,
@@ -44,7 +44,8 @@ class MinioGateway(S3Interface):
         """Проверяет существование бакета и создаёт, если его нет."""
         try:
             existing_buckets = [
-                b["Name"] for b in self._client.list_buckets().get("Buckets", [])
+                b.get("Name", "")
+                for b in self._client.list_buckets().get("Buckets", [])
             ]
             if self._bucket not in existing_buckets:
                 self._client.create_bucket(Bucket=self._bucket)
