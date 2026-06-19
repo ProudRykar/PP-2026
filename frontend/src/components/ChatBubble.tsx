@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import type { Message } from '../types'
 import { StickerRenderer } from './StickerRenderer'
 import { normalizeFileUrl } from '../utils'
@@ -14,6 +15,7 @@ interface ChatBubbleProps {
 }
 
 export function ChatBubble({ message, isOwn, isFirst, isLast, senderLabel, channelLabel, selected, onSelect }: ChatBubbleProps) {
+  const [lightboxUrl, setLightboxUrl] = useState<string | null>(null)
   const time = new Date(message.timestamp).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })
   const date = new Date(message.timestamp).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' })
 
@@ -28,8 +30,9 @@ export function ChatBubble({ message, isOwn, isFirst, isLast, senderLabel, chann
           <img
             src={normalizeFileUrl(message.metadata.file_url as string)}
             alt="photo"
-            className="w-full max-w-[400px] rounded-t-2xl object-cover"
+            className="w-full max-w-[400px] rounded-t-2xl object-cover cursor-pointer"
             loading="lazy"
+            onClick={(e) => { e.stopPropagation(); setLightboxUrl(normalizeFileUrl(message.metadata!.file_url as string)) }}
           />
           {message.content && message.content !== '[photo]' && (
             <p className="px-3.5 pt-2">{message.content}</p>
@@ -39,6 +42,29 @@ export function ChatBubble({ message, isOwn, isFirst, isLast, senderLabel, chann
     }
 
     return <p>{message.content || <span className="italic opacity-70">Нет текста</span>}</p>
+  }
+
+  const renderLightbox = () => {
+    if (!lightboxUrl) return null
+    return (
+      <div
+        className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4"
+        onClick={() => setLightboxUrl(null)}
+      >
+        <button
+          className="absolute right-4 top-4 flex h-10 w-10 items-center justify-center rounded-full bg-white/20 text-2xl text-white transition hover:bg-white/40"
+          onClick={() => setLightboxUrl(null)}
+        >
+          ✕
+        </button>
+        <img
+          src={lightboxUrl}
+          alt="photo full"
+          className="max-h-[90vh] max-w-[90vw] rounded-xl object-contain"
+          onClick={(e) => e.stopPropagation()}
+        />
+      </div>
+    )
   }
 
   return (
@@ -70,6 +96,7 @@ export function ChatBubble({ message, isOwn, isFirst, isLast, senderLabel, chann
           {isLast && <span className={`text-[10px] ${isOwn ? 'text-blue-200' : 'text-gray-400'}`}>{date}</span>}
         </div>
       </div>
+      {renderLightbox()}
     </div>
   )
 }
