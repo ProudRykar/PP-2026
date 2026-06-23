@@ -17,3 +17,4 @@ class MessageType(StrEnum):
     VIDEO = "video"
     AUDIO = "audio"
     VOICE = "voice"
+    ANIMATION = "animation"

@@ -1,7 +1,9 @@
 import logging
 import asyncio
 import io
+import os
 from typing import AsyncGenerator, Optional
+from urllib.parse import urlparse
 
 import aiohttp
 from telegram import Bot, InputFile
@@ -50,11 +52,24 @@ class TelegramEngine(MessageEngine):
                 async with session.get(file_url) as resp:
                     resp.raise_for_status()
                     file_bytes = await resp.read()
-            sent = await bot.send_photo(
-                chat_id=recipient,
-                photo=InputFile(file_bytes, filename="photo.jpg"),
-                caption=content or None,
-            )
+
+            parsed = urlparse(file_url)
+            _, ext = os.path.splitext(parsed.path)
+            ext = ext.lower()
+
+            if ext in (".gif", ".mp4", ".webm"):
+                filename = f"animation{ext}"
+                sent = await bot.send_animation(
+                    chat_id=recipient,
+                    animation=InputFile(file_bytes, filename=filename),
+                    caption=content or None,
+                )
+            else:
+                sent = await bot.send_photo(
+                    chat_id=recipient,
+                    photo=InputFile(file_bytes, filename="photo.jpg"),
+                    caption=content or None,
+                )
         else:
             sent = await bot.send_message(chat_id=recipient, text=content)
         return str(sent.message_id)
@@ -127,6 +142,56 @@ class TelegramEngine(MessageEngine):
             logger.error(f"Failed to upload sticker to S3: {e}")
             return None
 
+    async def _upload_animation_file_to_s3(self, doc) -> str | None:
+        if not self._s3:
+            return None
+        try:
+            file = await doc.get_file()
+            buf = io.BytesIO()
+            await file.download_to_memory(buf)
+            buf.seek(0)
+
+            object_name = f"animations/{file.file_id}.gif"
+            self._s3.put_object(
+                object_name=object_name,
+                data=buf,
+                size=buf.getbuffer().nbytes,
+                content_type="image/gif",
+            )
+            return self._s3.generate_presigned_url(object_name, expiration=86400)
+        except Exception as e:
+            logger.error(f"Failed to upload GIF document to S3: {e}")
+            return None
+
+    async def _upload_animation_to_s3(self, msg) -> str | None:
+        if not self._s3 or not msg.animation:
+            return None
+        try:
+            animation = msg.animation
+            file = await animation.get_file()
+
+            mime_type = animation.mime_type or "video/mp4"
+            if mime_type == "image/gif":
+                ext, content_type = ".gif", "image/gif"
+            else:
+                ext, content_type = ".mp4", "video/mp4"
+
+            buf = io.BytesIO()
+            await file.download_to_memory(buf)
+            buf.seek(0)
+
+            object_name = f"animations/{file.file_id}{ext}"
+            self._s3.put_object(
+                object_name=object_name,
+                data=buf,
+                size=buf.getbuffer().nbytes,
+                content_type=content_type,
+            )
+            return self._s3.generate_presigned_url(object_name, expiration=86400)
+        except Exception as e:
+            logger.error(f"Failed to upload animation to S3: {e}")
+            return None
+
     async def _handle_message(self, update, context) -> None:
         if not update.message:
             return
@@ -137,7 +202,13 @@ class TelegramEngine(MessageEngine):
         message_type = MessageType.TEXT
         media_type = None
         file_url = None
-        if msg.photo:
+        mime_type = None
+        if msg.animation:
+            media_type = "animation"
+            message_type = MessageType.ANIMATION
+            file_url = await self._upload_animation_to_s3(msg)
+            mime_type = msg.animation.mime_type or "video/mp4"
+        elif msg.photo:
             media_type = "photo"
             message_type = MessageType.PHOTO
             file_url = await self._upload_photo_to_s3(msg)
@@ -146,8 +217,14 @@ class TelegramEngine(MessageEngine):
             message_type = MessageType.STICKER
             file_url = await self._upload_sticker_to_s3(msg)
         elif msg.document:
-            media_type = "document"
-            message_type = MessageType.DOCUMENT
+            if msg.document.mime_type == "image/gif":
+                media_type = "animation"
+                message_type = MessageType.ANIMATION
+                file_url = await self._upload_animation_file_to_s3(msg.document)
+                mime_type = "image/gif"
+            else:
+                media_type = "document"
+                message_type = MessageType.DOCUMENT
         elif msg.video:
             media_type = "video"
             message_type = MessageType.VIDEO
@@ -171,6 +248,8 @@ class TelegramEngine(MessageEngine):
             metadata["media_type"] = media_type
         if file_url:
             metadata["file_url"] = file_url
+        if mime_type:
+            metadata["mime_type"] = mime_type
 
         message = Message(
             id=f"telegram:{msg.message_id}",

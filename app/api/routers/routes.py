@@ -4,6 +4,7 @@ import logging
 import os
 import uuid
 from datetime import datetime, timezone
+from urllib.parse import urlparse
 
 from litestar import Controller, get, post
 from litestar.enums import MediaType
@@ -129,7 +130,15 @@ class MessageController(Controller):
         message_type = "text"
         if data.file_url:
             metadata["file_url"] = data.file_url
-            message_type = "photo"
+            parsed = urlparse(data.file_url)
+            _, ext = os.path.splitext(parsed.path)
+            if ext.lower() in (".gif", ".mp4", ".webm"):
+                message_type = "animation"
+                metadata["mime_type"] = (
+                    "image/gif" if ext.lower() == ".gif" else "video/mp4"
+                )
+            else:
+                message_type = "photo"
 
         if original.sender_id == "agent":
             real_recipient = original.recipient or sender_id

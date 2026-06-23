@@ -78,7 +78,11 @@ export function ChatInput({ replyTarget, onSent }: ChatInputProps) {
 
       {previewUrl && (
         <div className="relative mb-2 inline-block">
-          <img src={previewUrl} alt="preview" className="h-20 w-20 rounded-lg object-cover" />
+          {selectedFile?.type.startsWith('video/') ? (
+            <video src={previewUrl} className="h-20 w-20 rounded-lg object-cover" />
+          ) : (
+            <img src={previewUrl} alt="preview" className="h-20 w-20 rounded-lg object-cover" />
+          )}
           <button
             className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-white text-xs hover:bg-red-600"
             onClick={() => setSelectedFile(null)}
@@ -102,7 +106,7 @@ export function ChatInput({ replyTarget, onSent }: ChatInputProps) {
         <input
           ref={fileInputRef}
           type="file"
-          accept="image/*"
+          accept="image/*,.gif,.mp4,.webm"
           className="hidden"
           onChange={handleFileSelect}
         />
