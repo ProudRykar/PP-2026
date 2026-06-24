@@ -15,6 +15,7 @@ class MessageResponse:
     subject: Optional[str] = None
     message_type: str = "text"
     parent_id: Optional[str] = None
+    curator_id: Optional[str] = None
 
 
 @dataclass(slots=True)

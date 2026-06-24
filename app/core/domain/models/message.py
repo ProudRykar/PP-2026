@@ -17,6 +17,7 @@ class Message:
     recipient: Optional[str] = None
     subject: Optional[str] = None
     parent_id: Optional[str] = None
+    curator_id: Optional[str] = None
 
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -30,4 +31,5 @@ class Message:
             "recipient": self.recipient,
             "subject": self.subject,
             "parent_id": self.parent_id,
+            "curator_id": self.curator_id,
         }

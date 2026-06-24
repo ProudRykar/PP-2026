@@ -14,6 +14,7 @@ class MessageRepository(ABC):
         self,
         channel: Optional[str] = None,
         sender_id: Optional[str] = None,
+        curator_id: Optional[str] = None,
         limit: int = 100,
         offset: int = 0,
     ) -> list[Message]:
@@ -21,4 +22,8 @@ class MessageRepository(ABC):
 
     @abstractmethod
     async def get_message_by_id(self, message_id: str) -> Optional[Message]:
+        pass
+
+    @abstractmethod
+    async def update_curator(self, message_id: str, curator_id: Optional[str]) -> None:
         pass

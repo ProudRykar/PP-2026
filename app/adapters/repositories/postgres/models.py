@@ -46,6 +46,7 @@ class MessageModel(Base):
     message_type = Column(String(20), nullable=False, server_default="text")
     subject = Column(String(500), nullable=True)
     parent_id = Column(String, nullable=True, index=True)
+    curator_id = Column(String, nullable=True, index=True)
     timestamp = Column(DateTime(timezone=True), nullable=False)
     metadata_ = Column("metadata", JSON, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())

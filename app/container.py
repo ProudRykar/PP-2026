@@ -23,10 +23,26 @@ from app.adapters.repositories.postgres.client_repository import (
 from app.core.services.message_service import MessageService
 from app.core.services.polling_service import PollingOrchestrator
 from app.core.services.client_service import ClientService
+from app.core.services.validation_service import (
+    FileValidator,
+    MessageValidator,
+    ClientValidator,
+)
+from app.core.services.curator_service import CuratorService
+from app.core.services.auth_service import AuthService
 from app.core.ports.client_repository import ClientRepository
+from app.core.ports.curator_repository import (
+    CuratorRepository,
+    AssignmentHistoryRepository,
+)
+from app.adapters.repositories.postgres.curator_repository import (
+    PostgresCuratorRepository,
+    PostgresAssignmentHistoryRepository,
+)
 from app.config import config
 
 import app.adapters.repositories.postgres.client_models  # noqa: F401 — register models with Base.metadata
+import app.adapters.repositories.postgres.curator_models  # noqa: F401 — register models with Base.metadata
 
 logger = logging.getLogger(__name__)
 
@@ -75,7 +91,24 @@ def configure_container() -> punq.Container:
         SenderRepository, PostgresSenderRepository, scope=punq.Scope.singleton
     )
 
+    container.register(
+        CuratorRepository, PostgresCuratorRepository, scope=punq.Scope.singleton
+    )
+
+    container.register(
+        AssignmentHistoryRepository,
+        PostgresAssignmentHistoryRepository,
+        scope=punq.Scope.singleton,
+    )
+
+    container.register(CuratorService, scope=punq.Scope.singleton)
+    container.register(AuthService, scope=punq.Scope.singleton)
+
     container.register(PollingService, PollingOrchestrator, scope=punq.Scope.singleton)
+
+    container.register(FileValidator, scope=punq.Scope.singleton)
+    container.register(MessageValidator, scope=punq.Scope.singleton)
+    container.register(ClientValidator, scope=punq.Scope.singleton)
 
     logger.info("DI container configured")
     return container

@@ -19,6 +19,7 @@ export function useWebSocket(onMessage: (data: unknown) => void) {
       const ws = new WebSocket(url)
 
       ws.onopen = () => {
+        console.debug('[WS] connected')
         wsRef.current = ws
       }
 
@@ -31,14 +32,16 @@ export function useWebSocket(onMessage: (data: unknown) => void) {
         }
       }
 
-      ws.onclose = () => {
+      ws.onclose = (e) => {
+        console.debug('[WS] closed:', { code: e.code, reason: e.reason, intentional: intentionalCloseRef.current })
         wsRef.current = null
         if (!intentionalCloseRef.current) {
           reconnectTimer = setTimeout(connect, RECONNECT_DELAY)
         }
       }
 
-      ws.onerror = () => {
+      ws.onerror = (e) => {
+        console.debug('[WS] error:', e)
         ws.close()
       }
     }

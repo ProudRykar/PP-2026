@@ -78,6 +78,43 @@ class MinIOConfig:
 
 
 @dataclass
+class ValidationConfig:
+    ALLOWED_UPLOAD_EXTENSIONS: tuple[str, ...] = (
+        "jpg",
+        "jpeg",
+        "png",
+        "gif",
+        "webp",
+        "mp4",
+        "webm",
+        "pdf",
+        "doc",
+        "docx",
+        "xls",
+        "xlsx",
+        "txt",
+        "csv",
+    )
+    MAX_FILE_SIZE: int = 50 * 1024 * 1024
+    MAX_MESSAGE_LENGTH: int = 10000
+    CLIENT_NAME_MAX_LENGTH: int = 255
+    EMAIL_MAX_LENGTH: int = 255
+
+
+@dataclass
+class AuthConfig:
+    jwt_secret: str = field(
+        default_factory=lambda: os.getenv("JWT_SECRET", "change-me")
+    )
+    jwt_algorithm: str = field(
+        default_factory=lambda: os.getenv("JWT_ALGORITHM", "HS256")
+    )
+    access_token_expire_minutes: int = field(
+        default_factory=lambda: int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "1440"))
+    )
+
+
+@dataclass
 class Config:
     """Класс конфигурации приложения
 
@@ -90,6 +127,8 @@ class Config:
     email: EmailConfig = field(default_factory=EmailConfig)
     app: AppConfig = field(default_factory=AppConfig)
     minio: MinIOConfig = field(default_factory=MinIOConfig)
+    validation: ValidationConfig = field(default_factory=ValidationConfig)
+    auth: AuthConfig = field(default_factory=AuthConfig)
 
 
 config = Config()

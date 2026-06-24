@@ -18,3 +18,14 @@ class MessageType(StrEnum):
     AUDIO = "audio"
     VOICE = "voice"
     ANIMATION = "animation"
+
+
+class CuratorRole(StrEnum):
+    ADMIN = "admin"
+    SUPERVISOR = "supervisor"
+    AGENT = "agent"
+
+
+class CuratorStatus(StrEnum):
+    ACTIVE = "active"
+    INACTIVE = "inactive"

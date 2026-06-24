@@ -7,8 +7,14 @@ from app.adapters.engines.factory import (
 )
 from app.core.ports.db import DatabaseGateway
 from app.core.ports.message_repository import MessageRepository
+from app.core.ports.curator_repository import (
+    CuratorRepository,
+    AssignmentHistoryRepository,
+)
 from app.core.ports.polling_service import PollingService
 from app.core.services.message_service import MessageService
+from app.core.services.curator_service import CuratorService
+from app.core.services.auth_service import AuthService
 
 
 def test_configure_container_resolves_all():
@@ -21,6 +27,12 @@ def test_configure_container_resolves_all():
     assert isinstance(container.resolve(EmailEngineFactory), EmailEngineFactory)
     assert isinstance(container.resolve(DatabaseGateway), DatabaseGateway)
     assert isinstance(container.resolve(MessageRepository), MessageRepository)
+    assert isinstance(container.resolve(CuratorRepository), CuratorRepository)
+    assert isinstance(
+        container.resolve(AssignmentHistoryRepository), AssignmentHistoryRepository
+    )
+    assert isinstance(container.resolve(CuratorService), CuratorService)
+    assert isinstance(container.resolve(AuthService), AuthService)
     assert isinstance(container.resolve(PollingService), PollingService)
     assert isinstance(container.resolve(MessageService), MessageService)
 

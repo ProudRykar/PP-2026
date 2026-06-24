@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
-import type { Message, Client } from './types'
-import { fetchMessages, fetchChannels, fetchHealth, fetchAllClients } from './api'
+import type { Message, Client, Curator } from './types'
+import { fetchMessages, fetchChannels, fetchHealth, fetchAllClients, fetchCurators as apiFetchCurators } from './api'
 import { MessageList } from './components/MessageList'
 import { ChatInput } from './components/ChatInput'
 import { EmailReplyForm } from './components/EmailReplyForm'
@@ -8,47 +8,63 @@ import { ClientCard } from './components/ClientCard'
 import { ContactList, type Contact, type ContactChannel } from './components/ContactList'
 import { ThemeToggle } from './components/ThemeToggle'
 import { useWebSocket } from './hooks/useWebSocket'
+import { LoginPage } from './components/LoginPage'
+import { RegisterPage } from './components/RegisterPage'
+import { useAuth } from './hooks/AuthContext'
 
 export default function App() {
+  const { isAuthenticated, loading: authLoading, curator, logout } = useAuth()
+  const [showRegister, setShowRegister] = useState(false)
+
   const [allMessages, setAllMessages] = useState<Message[]>([])
   const [clients, setClients] = useState<Map<string, Client>>(new Map())
-  const [loading, setLoading] = useState(true)
   const [backendOk, setBackendOk] = useState(true)
   const [selected, setSelected] = useState<Message | null>(null)
   const [activeContact, setActiveContact] = useState<Contact | null>(null)
 
+  const [curators, setCurators] = useState<Curator[]>([])
+  const [curatorFilter, setCuratorFilter] = useState<string | null>(null)
   const [showClientCard, setShowClientCard] = useState(false)
   const [unreadCounts, setUnreadCounts] = useState<Map<string, number>>(new Map())
   const [readMessageIds, setReadMessageIds] = useState<Set<string>>(new Set())
   const countedUnreadRef = useRef(new Set<string>())
 
-  const loadAll = useCallback(async () => {
-    setLoading(true)
-    try {
-      const [msgs, cls] = await Promise.all([
-        fetchMessages(),
-        fetchAllClients(),
-      ])
-      setAllMessages(msgs)
-      setReadMessageIds(new Set(msgs.map(m => m.id)))
-      countedUnreadRef.current = new Set(msgs.map(m => m.id))
-      const map = new Map<string, Client>()
-      for (const c of cls) map.set(c.id, c)
-      setClients(map)
-    } catch {
-      setBackendOk(false)
-    } finally {
-      setLoading(false)
-    }
-  }, [])
+  console.debug('[App] render:', { isAuthenticated, authLoading, curator: curator?.full_name, msgs: allMessages.length, backendOk })
 
   useEffect(() => {
-    fetchHealth()
-      .then(() => setBackendOk(true))
-      .catch(() => setBackendOk(false))
-    fetchChannels().catch(() => setBackendOk(false))
-    loadAll()
-  }, [loadAll])
+    console.debug('[App] data useEffect fired:', { isAuthenticated, authLoading })
+    if (!isAuthenticated) return
+    let cancelled = false
+    ;(async () => {
+      try {
+        console.debug('[App] starting data load...')
+        const [healthOk, channelsOk, curators, [msgs, cls]] = await Promise.all([
+          fetchHealth().then(r => { console.debug('[App] health ok'); return true }).catch(e => { console.debug('[App] health fail:', e); return false }),
+          fetchChannels().then(r => { console.debug('[App] channels ok'); return true }).catch(e => { console.debug('[App] channels fail:', e); return false }),
+          apiFetchCurators().catch(e => { console.debug('[App] curators fail:', e); return [] }),
+          Promise.all([
+            fetchMessages().catch(e => { console.debug('[App] messages fail:', e); throw e }),
+            fetchAllClients().catch(e => { console.debug('[App] clients fail:', e); throw e }),
+          ]),
+        ])
+        if (cancelled) { console.debug('[App] cancelled after load'); return }
+        console.debug('[App] data loaded:', { msgs: msgs?.length, clients: cls?.length, curators: curators?.length, healthOk, channelsOk })
+        if (!healthOk || !channelsOk) { setBackendOk(false); return }
+        setBackendOk(true)
+        setCurators(curators)
+        setAllMessages(msgs)
+        setReadMessageIds(new Set(msgs.map(m => m.id)))
+        countedUnreadRef.current = new Set(msgs.map(m => m.id))
+        const map = new Map<string, Client>()
+        for (const c of cls) map.set(c.id, c)
+        setClients(map)
+      } catch (e) {
+        console.debug('[App] data load error:', e)
+        if (!cancelled) setBackendOk(false)
+      }
+    })()
+    return () => { console.debug('[App] data effect cleanup'); cancelled = true }
+  }, [isAuthenticated])
 
   useWebSocket((data) => {
     const ev = data as Record<string, unknown>
@@ -87,6 +103,20 @@ export default function App() {
         setClients(map)
       }).catch(() => {})
     }
+
+    if (ev.type === 'curator_assigned' && typeof ev.message_id === 'string') {
+      console.debug('[WS] curator_assigned:', ev)
+      setAllMessages(prev => prev.map(m =>
+        m.id === ev.message_id ? { ...m, curator_id: ev.curator_id as string } : m
+      ))
+    }
+
+    if (ev.type === 'curator_transferred' && typeof ev.message_id === 'string') {
+      console.debug('[WS] curator_transferred:', ev)
+      setAllMessages(prev => prev.map(m =>
+        m.id === ev.message_id ? { ...m, curator_id: ev.curator_id as string } : m
+      ))
+    }
   })
 
   function extractId(raw: string): string {
@@ -102,6 +132,12 @@ export default function App() {
   function convSenderId(msg: Message): string {
     if (msg.sender_id === 'agent') return msg.recipient ?? msg.sender_id
     return extractId(msg.sender_id)
+  }
+
+  function msgMatch(msg: Message, channel: string, senderId: string): boolean {
+    if (msg.channel !== channel) return false
+    if (msg.sender_id === 'agent') return msg.recipient === senderId
+    return extractId(msg.sender_id) === senderId
   }
 
   const contacts = useMemo(() => {
@@ -187,18 +223,14 @@ export default function App() {
     return result
   }, [allMessages, clients])
 
-  function msgMatch(msg: Message, channel: string, senderId: string): boolean {
-    if (msg.channel !== channel) return false
-    if (msg.sender_id === 'agent') return msg.recipient === senderId
-    return extractId(msg.sender_id) === senderId
-  }
-
   const filteredMessages = useMemo(() => {
     if (!activeContact) return []
-    return allMessages
-      .filter((m) => msgMatch(m, activeContact.channel, activeContact.senderId))
-      .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime())
-  }, [activeContact, allMessages])
+    let msgs = allMessages.filter((m) => msgMatch(m, activeContact.channel, activeContact.senderId))
+    if (curatorFilter) {
+      msgs = msgs.filter(m => m.curator_id === curatorFilter)
+    }
+    return msgs.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime())
+  }, [activeContact, allMessages, curatorFilter])
 
   const markRead = useCallback((id: string) => {
     setReadMessageIds(prev => {
@@ -244,6 +276,20 @@ export default function App() {
     setShowClientCard(false)
   }, [markRead])
 
+  if (!isAuthenticated) {
+    if (authLoading) {
+      return (
+        <div className="flex min-h-screen items-center justify-center bg-gray-100 dark:bg-gray-950">
+          <p className="text-gray-400">Загрузка...</p>
+        </div>
+      )
+    }
+    if (showRegister) {
+      return <RegisterPage onSwitchToLogin={() => setShowRegister(false)} />
+    }
+    return <LoginPage onSwitchToRegister={() => setShowRegister(true)} />
+  }
+
   if (!backendOk) {
     return (
       <div className="mx-auto max-w-2xl py-20 text-center">
@@ -256,13 +302,42 @@ export default function App() {
   return (
     <div className="flex h-screen bg-gray-100 dark:bg-gray-950">
       <div className="relative z-10 flex w-80 shrink-0 flex-col bg-white shadow-sm dark:bg-gray-800">
-        <div className="flex items-center justify-between border-b border-gray-200 bg-gray-800 px-4 py-4 text-white dark:border-gray-700">
-          <div>
+        <div className="flex items-center justify-between border-b border-gray-200 bg-gray-800 px-4 py-3 text-white dark:border-gray-700">
+          <div className="min-w-0">
             <h1 className="text-lg font-bold">Омниканал</h1>
             <p className="mt-0.5 text-xs text-gray-300">{contacts.length} контактов</p>
           </div>
-          <ThemeToggle />
+          <div className="flex items-center gap-2 shrink-0">
+            <div className="hidden truncate text-right text-xs text-gray-300 sm:block">
+              <p className="font-medium text-white">{curator?.full_name}</p>
+              <p className="text-gray-400">{curator?.role}</p>
+            </div>
+            <button
+              onClick={logout}
+              className="flex h-8 w-8 items-center justify-center rounded-lg text-gray-300 transition hover:bg-gray-700 hover:text-white"
+              title="Выйти"
+            >
+              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+              </svg>
+            </button>
+            <ThemeToggle />
+          </div>
         </div>
+        {curators.length > 0 && (
+          <div className="border-b border-gray-200 px-3 py-2 dark:border-gray-700">
+            <select
+              className="w-full rounded-lg bg-gray-100 px-2 py-1.5 text-xs outline-none dark:bg-gray-700 dark:text-gray-300"
+              value={curatorFilter ?? ''}
+              onChange={e => setCuratorFilter(e.target.value || null)}
+            >
+              <option value="">Все кураторы</option>
+              {curators.filter(c => c.status === 'active').map(c => (
+                <option key={c.id} value={c.id}>{c.full_name}</option>
+              ))}
+            </select>
+          </div>
+        )}
         <div className="min-h-0 flex-1 overflow-hidden">
           <ContactList
             contacts={contacts}
@@ -312,7 +387,7 @@ export default function App() {
             <div className="flex-1 overflow-y-auto px-4">
               <MessageList
                 messages={filteredMessages}
-                loading={loading}
+                loading={authLoading}
                 selectedId={selected?.id ?? null}
                 onSelect={handleSelectMessage}
                 readMessageIds={readMessageIds}

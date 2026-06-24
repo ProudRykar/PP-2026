@@ -1,7 +1,7 @@
 import logging
 from typing import List, Optional, Dict, Any, cast
 from datetime import datetime
-from sqlalchemy import select, desc
+from sqlalchemy import select, desc, update
 
 from app.core.ports.message_repository import MessageRepository
 from app.core.domain.models.message import Message
@@ -35,6 +35,7 @@ class PostgresMessageRepository(MessageRepository):
                 message_type=message.message_type.value,
                 subject=message.subject,
                 parent_id=message.parent_id,
+                curator_id=message.curator_id,
                 timestamp=message.timestamp,
                 metadata_=message.metadata,
             )
@@ -45,6 +46,7 @@ class PostgresMessageRepository(MessageRepository):
         self,
         channel: Optional[str] = None,
         sender_id: Optional[str] = None,
+        curator_id: Optional[str] = None,
         limit: int = 100,
         offset: int = 0,
     ) -> List[Message]:
@@ -55,6 +57,8 @@ class PostgresMessageRepository(MessageRepository):
                 query = query.where(MessageModel.channel == channel)
             if sender_id:
                 query = query.where(MessageModel.sender_id == sender_id)
+            if curator_id:
+                query = query.where(MessageModel.curator_id == curator_id)
 
             query = query.limit(limit).offset(offset)
             result = await session.execute(query)
@@ -70,6 +74,15 @@ class PostgresMessageRepository(MessageRepository):
             msg_model = result.scalar_one_or_none()
             return self._to_message(msg_model) if msg_model else None
 
+    async def update_curator(self, message_id: str, curator_id: Optional[str]) -> None:
+        async with self._db.get_session() as session:
+            await session.execute(
+                update(MessageModel)
+                .where(MessageModel.id == message_id)
+                .values(curator_id=curator_id)
+            )
+            logger.debug(f"Message {message_id} curator updated to {curator_id}")
+
     def _to_message(self, m: MessageModel) -> Message:
         return Message(
             id=cast(str, m.id),
@@ -84,4 +97,5 @@ class PostgresMessageRepository(MessageRepository):
             if m.message_type
             else MessageType.TEXT,
             metadata=cast(Dict[str, Any], m.metadata_ if m.metadata_ else {}),
+            curator_id=cast(Optional[str], m.curator_id),
         )

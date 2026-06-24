@@ -11,11 +11,15 @@ from app.api.dependencies import (
     get_message_service,
     get_polling_service,
     get_client_service,
+    get_curator_service,
+    get_auth_service,
 )
 from app.api.exceptions.handlers import EXCEPTION_HANDLERS
 from app.api.routers.routes import MessageController
 from app.api.routers.health import HealthController
 from app.api.routers.client_routes import ClientController
+from app.api.routers.curator_routes import CuratorController, AssignmentController
+from app.api.routers.auth_routes import AuthController
 from app.adapters.engines.factory import EngineAbstractFactory
 from app.core.ports.db import DatabaseGateway
 from app.core.ports.polling_service import PollingService
@@ -116,6 +120,9 @@ route_handlers: list = [
     MessageController,
     HealthController,
     ClientController,
+    CuratorController,
+    AssignmentController,
+    AuthController,
     websocket_handler,
 ]
 
@@ -132,6 +139,8 @@ app = Litestar(
         "service": Provide(get_message_service, sync_to_thread=False),
         "polling": Provide(get_polling_service, sync_to_thread=False),
         "client_service": Provide(get_client_service, sync_to_thread=False),
+        "curator_service": Provide(get_curator_service, sync_to_thread=False),
+        "auth_service": Provide(get_auth_service, sync_to_thread=False),
     },
     exception_handlers=EXCEPTION_HANDLERS,  # type: ignore[arg-type]
 )

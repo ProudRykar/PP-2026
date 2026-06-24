@@ -9,6 +9,7 @@ export interface Message {
   recipient: string | null
   subject: string | null
   parent_id: string | null
+  curator_id: string | null
 }
 
 export interface ChannelList {
@@ -58,4 +59,42 @@ export interface ClientUpdatePayload {
   email?: string
   avatar_url?: string
   metadata?: Record<string, unknown>
+}
+
+export interface Curator {
+  id: string
+  full_name: string
+  login: string
+  email: string
+  role: string
+  status: string
+  avatar_url: string | null
+  created_at: string | null
+  last_activity: string | null
+}
+
+export interface AssignCuratorPayload {
+  curator_id: string
+  reason?: string
+}
+
+export interface TransferPayload {
+  from_curator_id: string
+  to_curator_id: string
+  reason?: string
+}
+
+export interface AssignmentHistoryEntry {
+  id: string
+  message_id: string
+  from_curator_id: string | null
+  to_curator_id: string | null
+  assigned_by: string | null
+  reason: string | null
+  created_at: string | null
+}
+
+export interface AuthResponse {
+  token: string
+  curator: Curator
 }

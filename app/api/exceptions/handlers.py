@@ -8,6 +8,20 @@ from app.api.exceptions.problem_factory import (
     problem_factory,
 )
 from app.core.errors.message import MessageNotFoundError
+from app.core.errors.curator import (
+    CuratorNotFoundError,
+    CuratorValidationError,
+    CuratorAssignmentError,
+    CuratorAlreadyAssignedError,
+)
+from app.core.errors.validation import (
+    FileValidationError,
+    FileExtensionValidationError,
+    FileSizeValidationError,
+    MessageValidationError,
+    ClientValidationError,
+    EmailValidationError,
+)
 
 
 def create_problem_response(
@@ -36,6 +50,18 @@ def create_handler(
 
 ERROR_MAPPING: dict[ErrorCode, tuple[type[Exception], ...]] = {
     ErrorCode.MESSAGE_NOT_FOUND: (MessageNotFoundError,),
+    ErrorCode.CURATOR_NOT_FOUND: (CuratorNotFoundError,),
+    ErrorCode.VALIDATION_ERROR: (
+        FileValidationError,
+        FileExtensionValidationError,
+        FileSizeValidationError,
+        MessageValidationError,
+        ClientValidationError,
+        EmailValidationError,
+        CuratorValidationError,
+        CuratorAssignmentError,
+        CuratorAlreadyAssignedError,
+    ),
 }
 
 

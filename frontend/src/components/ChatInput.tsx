@@ -76,12 +76,17 @@ export function ChatInput({ replyTarget, onSent }: ChatInputProps) {
         </div>
       )}
 
-      {previewUrl && (
+      {previewUrl && selectedFile && (
         <div className="relative mb-2 inline-block">
-          {selectedFile?.type.startsWith('video/') ? (
+          {selectedFile.type.startsWith('video/') ? (
             <video src={previewUrl} className="h-20 w-20 rounded-lg object-cover" />
-          ) : (
+          ) : selectedFile.type.startsWith('image/') ? (
             <img src={previewUrl} alt="preview" className="h-20 w-20 rounded-lg object-cover" />
+          ) : (
+            <div className="flex h-20 w-40 items-center gap-2 rounded-lg bg-gray-100 px-3 dark:bg-gray-700">
+              <span className="text-2xl">📎</span>
+              <div className="min-w-0 flex-1 truncate text-sm">{selectedFile.name}</div>
+            </div>
           )}
           <button
             className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-white text-xs hover:bg-red-600"
@@ -97,7 +102,7 @@ export function ChatInput({ replyTarget, onSent }: ChatInputProps) {
           className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gray-100 text-gray-500 transition hover:bg-gray-200 disabled:opacity-40 dark:bg-gray-700 dark:text-gray-400 dark:hover:bg-gray-600"
           onClick={() => fileInputRef.current?.click()}
           disabled={!replyTarget || sending}
-          title="Прикрепить изображение"
+          title="Прикрепить файл"
         >
           <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
@@ -106,7 +111,7 @@ export function ChatInput({ replyTarget, onSent }: ChatInputProps) {
         <input
           ref={fileInputRef}
           type="file"
-          accept="image/*,.gif,.mp4,.webm"
+          accept="image/*,.gif,.mp4,.webm,.pdf,.doc,.docx,.xls,.xlsx,.txt,.csv"
           className="hidden"
           onChange={handleFileSelect}
         />

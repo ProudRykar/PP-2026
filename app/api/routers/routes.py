@@ -17,6 +17,7 @@ from app.core.domain.models.channel_type import ChannelType, MessageType
 from app.core.domain.models.message import Message
 from app.core.errors.message import MessageNotFoundError
 from app.core.services.message_service import MessageService
+from app.core.services.validation_service import FileValidator
 from app.events import broadcast_message
 from app.container import get_container
 
@@ -35,6 +36,7 @@ def _to_response(msg: Message) -> MessageResponse:
         recipient=msg.recipient,
         subject=msg.subject,
         parent_id=msg.parent_id,
+        curator_id=msg.curator_id,
     )
 
 
@@ -51,11 +53,18 @@ class MessageController(Controller):
         sender_id: str | None = Parameter(
             default=None, description="Filter by sender ID"
         ),
+        curator_id: str | None = Parameter(
+            default=None, description="Filter by responsible curator ID"
+        ),
         limit: int = Parameter(default=100, ge=1, le=1000),
         offset: int = Parameter(default=0, ge=0),
     ) -> list[MessageResponse]:
         messages = await service.get_messages(
-            channel=channel, sender_id=sender_id, limit=limit, offset=offset
+            channel=channel,
+            sender_id=sender_id,
+            curator_id=curator_id,
+            limit=limit,
+            offset=offset,
         )
         return [_to_response(msg) for msg in messages]
 
@@ -86,10 +95,12 @@ class MessageController(Controller):
             return {"status": "error", "detail": "No file data provided"}
 
         raw = base64.b64decode(file_data)
-
-        _, ext = os.path.splitext(filename)
         content_type = data.get("content_type", "application/octet-stream")
-        object_name = f"uploads/{uuid.uuid4().hex}{ext}"
+
+        validator = get_container().resolve(FileValidator)
+        ext = validator.validate_file(filename, content_type, raw)
+
+        object_name = f"uploads/{uuid.uuid4().hex}.{ext}"
 
         buf = io.BytesIO(raw)
         s3.put_object(
@@ -132,10 +143,33 @@ class MessageController(Controller):
             metadata["file_url"] = data.file_url
             parsed = urlparse(data.file_url)
             _, ext = os.path.splitext(parsed.path)
-            if ext.lower() in (".gif", ".mp4", ".webm"):
+            ext_lower = ext.lower()
+            if ext_lower in (".gif", ".mp4", ".webm"):
                 message_type = "animation"
                 metadata["mime_type"] = (
-                    "image/gif" if ext.lower() == ".gif" else "video/mp4"
+                    "image/gif" if ext_lower == ".gif" else "video/mp4"
+                )
+            elif ext_lower in (
+                ".pdf",
+                ".doc",
+                ".docx",
+                ".xls",
+                ".xlsx",
+                ".txt",
+                ".csv",
+            ):
+                message_type = "document"
+                mime_map = {
+                    ".pdf": "application/pdf",
+                    ".doc": "application/msword",
+                    ".docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                    ".xls": "application/vnd.ms-excel",
+                    ".xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    ".txt": "text/plain",
+                    ".csv": "text/csv",
+                }
+                metadata["mime_type"] = mime_map.get(
+                    ext_lower, "application/octet-stream"
                 )
             else:
                 message_type = "photo"

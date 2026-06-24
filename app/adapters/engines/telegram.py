@@ -64,6 +64,13 @@ class TelegramEngine(MessageEngine):
                     animation=InputFile(file_bytes, filename=filename),
                     caption=content or None,
                 )
+            elif ext in (".pdf", ".doc", ".docx", ".xls", ".xlsx", ".txt", ".csv"):
+                filename = f"document{ext}"
+                sent = await bot.send_document(
+                    chat_id=recipient,
+                    document=InputFile(file_bytes, filename=filename),
+                    caption=content or None,
+                )
             else:
                 sent = await bot.send_photo(
                     chat_id=recipient,
@@ -163,6 +170,33 @@ class TelegramEngine(MessageEngine):
             logger.error(f"Failed to upload GIF document to S3: {e}")
             return None
 
+    async def _upload_document_to_s3(self, msg) -> str | None:
+        if not self._s3 or not msg.document:
+            return None
+        try:
+            doc = msg.document
+            file = await doc.get_file()
+
+            file_name = doc.file_name or "document"
+            _, ext = os.path.splitext(file_name)
+            mime_type = doc.mime_type or "application/octet-stream"
+
+            buf = io.BytesIO()
+            await file.download_to_memory(buf)
+            buf.seek(0)
+
+            object_name = f"documents/{file.file_id}{ext}"
+            self._s3.put_object(
+                object_name=object_name,
+                data=buf,
+                size=buf.getbuffer().nbytes,
+                content_type=mime_type,
+            )
+            return self._s3.generate_presigned_url(object_name, expiration=86400)
+        except Exception as e:
+            logger.error(f"Failed to upload document to S3: {e}")
+            return None
+
     async def _upload_animation_to_s3(self, msg) -> str | None:
         if not self._s3 or not msg.animation:
             return None
@@ -225,6 +259,8 @@ class TelegramEngine(MessageEngine):
             else:
                 media_type = "document"
                 message_type = MessageType.DOCUMENT
+                file_url = await self._upload_document_to_s3(msg)
+                mime_type = msg.document.mime_type or "application/octet-stream"
         elif msg.video:
             media_type = "video"
             message_type = MessageType.VIDEO
@@ -250,6 +286,9 @@ class TelegramEngine(MessageEngine):
             metadata["file_url"] = file_url
         if mime_type:
             metadata["mime_type"] = mime_type
+        if media_type == "document" and msg.document:
+            metadata["file_name"] = msg.document.file_name or "document"
+            metadata["file_size"] = msg.document.file_size or 0
 
         message = Message(
             id=f"telegram:{msg.message_id}",

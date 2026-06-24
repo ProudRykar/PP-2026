@@ -25,6 +25,7 @@ class ErrorMeta:
 class ErrorCode(Enum):
     MESSAGE_NOT_FOUND = ErrorMeta("message-not-found", "Сообщение не найдено", 404)
     CHANNEL_NOT_FOUND = ErrorMeta("channel-not-found", "Канал не найден", 404)
+    CURATOR_NOT_FOUND = ErrorMeta("curator-not-found", "Куратор не найден", 404)
 
     VALIDATION_ERROR = ErrorMeta("validation-error", "Ошибка валидации данных", 400)
 
