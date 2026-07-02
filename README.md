@@ -103,27 +103,27 @@ App (конфиг, DI-контейнер, точка входа)
 
 ```mermaid
 sequenceDiagram
-    participant User as Внешний пользователь
+    actor User as Внешний пользователь
     participant TG as Telegram Bot
     participant Q as asyncio.Queue
     participant Poll as PollingOrchestrator
     participant DB as PostgreSQL
     participant WS as WebSocket
-    operator Browser (Frontend)
+    actor Browser as Frontend
 
     User->>TG: Пишет сообщение
-    TG->>TG: _handle_message() → Message
-    TG->>Q: put()
+    TG->>TG: Обработка (handle_message)
+    TG->>Q: put(Message)
     loop polling
         Poll->>Q: get_incoming()
         Q-->>Poll: Message
-        Poll->>Poll: _extract_client_info()
+        Poll->>Poll: Извлечение данных клиента
         Poll->>DB: get_or_create_client()
         Poll->>DB: save_message()
-        Poll->>WS: broadcast_message({"type":"new_message", ...})
-        WS-->>Browser: {"type":"new_message", ...}
+        Poll->>WS: broadcast (new_message)
+        WS-->>Browser: new_message
     end
-    Browser->>Browser: Обновляет список контактов и сообщений
+    Browser->>Browser: Обновление списка контактов
 ```
 
 ### Процесс отправки ответа куратором
@@ -186,7 +186,7 @@ flowchart TD
     I -->|Нет| K[Пропустить Email]
     J --> L[Зарегистрировать движки в PollingService]
     K --> L
-    L --> M[start_polling() - асинхронный task]
+    L --> M["start_polling() — асинхронная задача"]
     M --> N[Приложение готово к приёму запросов]
 ```
 
