@@ -67,6 +67,13 @@ export function fetchClient(id: string): Promise<Client> {
   return request<Client>(`/api/clients/${encodeURIComponent(id)}`)
 }
 
+export function assignClientCurator(clientId: string, curatorId: string): Promise<Client> {
+  return request<Client>(`/api/clients/${encodeURIComponent(clientId)}`, {
+    method: 'PUT',
+    body: JSON.stringify({ curator_id: curatorId || null }),
+  })
+}
+
 export function updateClient(id: string, payload: ClientUpdatePayload): Promise<Client> {
   return request<Client>(`/api/clients/${encodeURIComponent(id)}`, {
     method: 'PUT',
@@ -120,6 +127,10 @@ export function transferCurator(messageId: string, payload: TransferPayload): Pr
     method: 'POST',
     body: JSON.stringify(payload),
   })
+}
+
+export function fetchCuratorAssignments(curatorId: string): Promise<AssignmentHistoryEntry[]> {
+  return request<AssignmentHistoryEntry[]>(`/api/curators/${encodeURIComponent(curatorId)}/assignments`)
 }
 
 export function fetchAssignmentHistory(messageId: string): Promise<AssignmentHistoryEntry[]> {

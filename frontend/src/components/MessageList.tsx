@@ -8,7 +8,9 @@ interface MessageListProps {
   loading: boolean
   selectedId: string | null
   onSelect: (msg: Message) => void
+  onReply?: (msg: Message) => void
   readMessageIds?: Set<string>
+  curatorName?: string
 }
 
 function groupBySender(messages: Message[]): Message[][] {
@@ -24,7 +26,8 @@ function groupBySender(messages: Message[]): Message[][] {
   return groups
 }
 
-function senderLabel(msg: Message): string {
+function senderLabel(msg: Message, ownName?: string): string {
+  if (msg.sender_id === "agent") return ownName || "Agent"
   if (msg.sender_id.startsWith('telegram:') || !isNaN(Number(msg.sender_id))) {
     return `User ${msg.sender_id.slice(0, 6)}`
   }
@@ -56,7 +59,7 @@ function buildEmailThreads(messages: Message[]): Message[][] {
   return roots.map(root => [root, ...(children.get(root.id) ?? [])])
 }
 
-export function MessageList({ messages, loading, selectedId, onSelect, readMessageIds }: MessageListProps) {
+export function MessageList({ messages, loading, selectedId, onSelect, onReply, readMessageIds, curatorName }: MessageListProps) {
   const bottomRef = useRef<HTMLDivElement>(null)
   const isNearBottomRef = useRef(true)
 
@@ -106,10 +109,11 @@ export function MessageList({ messages, loading, selectedId, onSelect, readMessa
         <ChatGroup
           key={`chat-${group[0].sender_id}-${gi}`}
           messages={group}
-          senderLabel={senderLabel(group[0])}
+          senderLabel={senderLabel(group[0], curatorName)}
           channelLabel={channelLabel(group[0])}
           selectedId={selectedId}
           onSelect={onSelect}
+          onReply={onReply}
         />
       ))}
       {emailThreads.length > 0 && (

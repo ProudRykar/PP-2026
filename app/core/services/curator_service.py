@@ -1,15 +1,18 @@
 import logging
+import re
 from typing import Optional, List
 from uuid import uuid4
 
 from app.core.domain.models.curator import Curator, AssignmentHistory
 from app.core.domain.models.channel_type import CuratorRole, CuratorStatus
 from app.core.domain.models.message import Message
+from app.core.domain.models.client import Client
 from app.core.ports.curator_repository import (
     CuratorRepository,
     AssignmentHistoryRepository,
 )
 from app.core.ports.message_repository import MessageRepository
+from app.core.ports.client_repository import ClientRepository
 from app.core.errors.curator import (
     CuratorNotFoundError,
     CuratorValidationError,
@@ -21,16 +24,23 @@ from app.events import broadcast_message
 logger = logging.getLogger(__name__)
 
 
+def _extract_external_id(raw: str) -> str:
+    match = re.search(r"<([^>]+)>", raw)
+    return match.group(1) if match else raw
+
+
 class CuratorService:
     def __init__(
         self,
         curator_repository: CuratorRepository,
         assignment_repository: AssignmentHistoryRepository,
         message_repository: MessageRepository,
+        client_repository: ClientRepository,
     ):
         self._curator_repo = curator_repository
         self._assignment_repo = assignment_repository
         self._message_repo = message_repository
+        self._client_repo = client_repository
 
     async def create_curator(
         self,
@@ -119,6 +129,20 @@ class CuratorService:
         await self._curator_repo.delete(curator_id)
         logger.info(f"Curator deleted: {curator_id}")
 
+    async def _find_client_for_message(self, message: Message) -> Optional[Client]:
+        external_id = _extract_external_id(message.sender_id)
+        client = await self._client_repo.find_by_channel(message.channel, external_id)
+        if not client and "@" in external_id:
+            client = await self._client_repo.find_by_email(external_id)
+        return client
+
+    async def _update_client_curator(self, message: Message, curator_id: Optional[str]) -> None:
+        client = await self._find_client_for_message(message)
+        if client and client.curator_id != curator_id:
+            client.curator_id = curator_id
+            await self._client_repo.update(client)
+            logger.info(f"Client {client.id} curator updated to {curator_id}")
+
     async def assign_curator_to_message(
         self,
         message_id: str,
@@ -155,6 +179,7 @@ class CuratorService:
 
         message.curator_id = curator_id
         await self._message_repo.update_curator(message_id, curator_id)
+        await self._update_client_curator(message, curator_id)
         logger.info(f"Message {message_id} assigned to curator {curator_id}")
 
         await broadcast_message(
@@ -163,6 +188,7 @@ class CuratorService:
                 "message_id": message_id,
                 "curator_id": curator_id,
                 "assigned_by": assigned_by,
+                "assignment_id": entry.id,
                 "timestamp": entry.created_at.isoformat(),
             }
         )
@@ -200,6 +226,7 @@ class CuratorService:
 
         message.curator_id = to_curator_id
         await self._message_repo.update_curator(message_id, to_curator_id)
+        await self._update_client_curator(message, to_curator_id)
         logger.info(
             f"Message {message_id} transferred from {from_curator_id} to {to_curator_id}"
         )
@@ -212,6 +239,7 @@ class CuratorService:
                 "to_curator_id": to_curator_id,
                 "assigned_by": assigned_by,
                 "reason": reason,
+                "assignment_id": entry.id,
                 "timestamp": entry.created_at.isoformat(),
             }
         )

@@ -40,13 +40,15 @@ services:
       dockerfile: Dockerfile
     container_name: omnichannel-app
     restart: unless-stopped
+    network_mode: "host"
     env_file:
       - .env
+    environment:
+      DATABASE_HOST: localhost
+      MINIO_ENDPOINT: http://localhost:9000
     depends_on:
       postgres:
         condition: service_healthy
-    ports:
-      - "8000:8000"
 
 volumes:
   postgres_data:

@@ -126,7 +126,11 @@ route_handlers: list = [
     websocket_handler,
 ]
 
-if os.path.exists("frontend"):
+if os.path.exists("frontend/dist"):
+    route_handlers.append(
+        create_static_files_router(path="/", directories=["frontend/dist"], html_mode=True)
+    )
+elif os.path.exists("frontend"):
     route_handlers.append(
         create_static_files_router(path="/", directories=["frontend"], html_mode=True)
     )

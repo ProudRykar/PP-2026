@@ -51,6 +51,7 @@ export interface Client {
   metadata: Record<string, unknown>
   created_at: string | null
   last_interaction: string | null
+  curator_id: string | null
 }
 
 export interface ClientUpdatePayload {

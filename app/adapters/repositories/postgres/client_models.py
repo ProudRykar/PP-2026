@@ -22,6 +22,7 @@ class ClientModel(Base):
     metadata_ = Column("metadata", JSON, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     last_interaction = Column(DateTime(timezone=True), nullable=True)
+    curator_id = Column(String, ForeignKey("curators.id", ondelete="SET NULL"), nullable=True, index=True)
 
     __table_args__ = (PrimaryKeyConstraint("id"),)
 

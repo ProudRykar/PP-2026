@@ -1,9 +1,8 @@
 import { useState, useEffect } from 'react'
-import type { Message, Curator, AssignmentHistoryEntry } from '../types'
+import type { Message } from '../types'
 import { StickerRenderer } from './StickerRenderer'
 import { normalizeFileUrl } from '../utils'
-import { fetchCurators, fetchCurator, assignCurator, transferCurator, fetchAssignmentHistory } from '../api'
-import { useAuth } from '../hooks/AuthContext'
+import { fetchCurator } from '../api'
 
 interface ChatBubbleProps {
   message: Message
@@ -14,17 +13,13 @@ interface ChatBubbleProps {
   channelLabel: string
   selected: boolean
   onSelect: (msg: Message) => void
+  onReply?: (msg: Message) => void
 }
 
-export function ChatBubble({ message, isOwn, isFirst, isLast, senderLabel, channelLabel, selected, onSelect }: ChatBubbleProps) {
-  const { curator: me } = useAuth()
+export function ChatBubble({ message, isOwn, isFirst, isLast, senderLabel, channelLabel, selected, onSelect, onReply }: ChatBubbleProps) {
   const [lightbox, setLightbox] = useState<{ url: string; isVideo: boolean } | null>(null)
-  const [curators, setCurators] = useState<Curator[]>([])
-  const [showAssign, setShowAssign] = useState(false)
-  const [showTransfer, setShowTransfer] = useState(false)
-  const [showHistory, setShowHistory] = useState(false)
-  const [historyEntries, setHistoryEntries] = useState<AssignmentHistoryEntry[]>([])
   const [curatorName, setCuratorName] = useState<string | null>(null)
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null)
   const time = new Date(message.timestamp).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })
   const date = new Date(message.timestamp).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' })
 
@@ -41,33 +36,22 @@ export function ChatBubble({ message, isOwn, isFirst, isLast, senderLabel, chann
     }
   }, [message.curator_id])
 
-  const handleAssign = async (curatorId: string) => {
-    try {
-      await assignCurator(message.id, { curator_id: curatorId })
-      const c = curators.find(c => c.id === curatorId)
-      setCuratorName(c?.full_name || null)
-      setShowAssign(false)
-    } catch {}
+  useEffect(() => {
+    if (!contextMenu) return
+    const close = () => setContextMenu(null)
+    document.addEventListener('click', close)
+    return () => document.removeEventListener('click', close)
+  }, [contextMenu])
+
+  const handleContextMenu = (e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setContextMenu({ x: e.clientX, y: e.clientY })
   }
 
-  const handleTransfer = async (toCuratorId: string) => {
-    try {
-      await transferCurator(message.id, {
-        from_curator_id: message.curator_id!,
-        to_curator_id: toCuratorId,
-      })
-      const c = curators.find(c => c.id === toCuratorId)
-      setCuratorName(c?.full_name || null)
-      setShowTransfer(false)
-    } catch {}
-  }
-
-  const openHistory = async () => {
-    try {
-      const entries = await fetchAssignmentHistory(message.id)
-      setHistoryEntries(entries)
-      setShowHistory(true)
-    } catch {}
+  const handleReply = () => {
+    onReply?.(message)
+    setContextMenu(null)
   }
 
   const formatFileSize = (bytes: number): string => {
@@ -207,12 +191,13 @@ export function ChatBubble({ message, isOwn, isFirst, isLast, senderLabel, chann
     <div
       className={`group relative max-w-[75%] ${isFirst ? 'mt-4' : 'mt-0.5'} ${selected ? 'opacity-100' : ''}`}
       onClick={() => onSelect(message)}
+      onContextMenu={handleContextMenu}
     >
       {isFirst && (
         <div className={`mb-1 flex items-center gap-2 ${isOwn ? 'justify-end' : ''}`}>
           {!isOwn && <span className="text-xs font-semibold text-gray-500 dark:text-gray-400">{senderLabel}</span>}
           {!isOwn && <span className="rounded bg-gray-100 px-1.5 py-0.5 text-[10px] font-medium text-gray-500 dark:bg-gray-700 dark:text-gray-400">{channelLabel}</span>}
-          {isOwn && <span className="text-[10px] text-gray-400 dark:text-gray-500">Вы</span>}
+          {isOwn && <span className="text-[10px] text-gray-400 dark:text-gray-500">{senderLabel}</span>}
         </div>
       )}
       <div
@@ -233,110 +218,28 @@ export function ChatBubble({ message, isOwn, isFirst, isLast, senderLabel, chann
               👤 {curatorName}
             </span>
           )}
-          {!isOwn && !curatorName && (
-            <button
-              className="mr-auto text-[10px] text-blue-400 hover:text-blue-600 dark:text-blue-300"
-              onClick={(e) => { e.stopPropagation(); fetchCurators('active').then(setCurators).then(() => setShowAssign(!showAssign)).catch(() => {}) }}
-            >
-              + Назначить
-            </button>
-          )}
-          {showAssign && (
-            <div
-              className="absolute bottom-full left-0 z-10 mb-1 max-h-32 overflow-y-auto rounded-lg border bg-white p-1 shadow-lg dark:border-gray-600 dark:bg-gray-800"
-              onClick={(e) => e.stopPropagation()}
-            >
-              {curators.filter(c => c.id !== me?.id).map(c => (
-                <button
-                  key={c.id}
-                  className="block w-full rounded px-2 py-1 text-left text-xs hover:bg-gray-100 dark:hover:bg-gray-700"
-                  onClick={() => handleAssign(c.id)}
-                >
-                  {c.full_name}
-                </button>
-              ))}
-            </div>
-          )}
-          {!isOwn && curatorName && (
-            <div className="mr-auto flex gap-1">
-              <button
-                className="text-[10px] text-blue-400 hover:text-blue-600 dark:text-blue-300"
-                onClick={(e) => { e.stopPropagation(); fetchCurators('active').then(setCurators).then(() => setShowTransfer(!showTransfer)).catch(() => {}) }}
-              >
-                ↻ Переназначить
-              </button>
-              <button
-                className="text-[10px] text-gray-400 hover:text-gray-600 dark:text-gray-500 dark:hover:text-gray-300"
-                onClick={(e) => { e.stopPropagation(); openHistory() }}
-              >
-                ⓘ
-              </button>
-            </div>
-          )}
-          {showTransfer && (
-            <div
-              className="absolute bottom-full left-0 z-10 mb-1 max-h-32 overflow-y-auto rounded-lg border bg-white p-1 shadow-lg dark:border-gray-600 dark:bg-gray-800"
-              onClick={(e) => e.stopPropagation()}
-            >
-              {curators.filter(c => c.id !== message.curator_id).map(c => (
-                <button
-                  key={c.id}
-                  className="block w-full rounded px-2 py-1 text-left text-xs hover:bg-gray-100 dark:hover:bg-gray-700"
-                  onClick={() => handleTransfer(c.id)}
-                >
-                  {c.full_name}
-                </button>
-              ))}
-            </div>
-          )}
-          {showHistory && (
-            <div
-              className="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
-              onClick={() => setShowHistory(false)}
-            >
-              <div
-                className="max-h-80 w-72 overflow-y-auto rounded-xl bg-white p-4 shadow-lg dark:bg-gray-800"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <div className="mb-3 flex items-center justify-between">
-                  <h3 className="text-sm font-semibold text-gray-800 dark:text-gray-100">История назначений</h3>
-                  <button
-                    className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
-                    onClick={() => setShowHistory(false)}
-                  >
-                    ✕
-                  </button>
-                </div>
-                {historyEntries.length === 0 && (
-                  <p className="text-xs text-gray-400">Нет записей</p>
-                )}
-                {historyEntries.map(entry => (
-                  <div key={entry.id} className="mb-2 border-b border-gray-100 pb-2 last:border-0 dark:border-gray-700">
-                    <p className="text-xs text-gray-600 dark:text-gray-400">
-                      {entry.from_curator_id
-                        ? `с ${entry.from_curator_id.slice(0, 8)}…`
-                        : '—'} → {entry.to_curator_id
-                          ? `${entry.to_curator_id.slice(0, 8)}…`
-                          : '—'}
-                    </p>
-                    {entry.reason && (
-                      <p className="text-[10px] text-gray-400">{entry.reason}</p>
-                    )}
-                    {entry.created_at && (
-                      <p className="text-[10px] text-gray-400">
-                        {new Date(entry.created_at).toLocaleString('ru-RU')}
-                      </p>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
           <span className={`text-[10px] ${isOwn ? 'text-blue-200' : 'text-gray-400 dark:text-gray-500'}`}>{time}</span>
           {isLast && <span className={`text-[10px] ${isOwn ? 'text-blue-200' : 'text-gray-400 dark:text-gray-500'}`}>{date}</span>}
         </div>
       </div>
       {renderLightbox()}
+      {contextMenu && (
+        <div
+          className="fixed z-50 w-32 rounded-lg border bg-white py-1 shadow-lg dark:border-gray-600 dark:bg-gray-800"
+          style={{ left: contextMenu.x, top: contextMenu.y }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <button
+            className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-xs text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700"
+            onClick={handleReply}
+          >
+            <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16l-4-4m0 0l4-4m-4 4h18" />
+            </svg>
+            Ответить
+          </button>
+        </div>
+      )}
     </div>
   )
 }

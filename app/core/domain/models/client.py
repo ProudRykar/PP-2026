@@ -33,6 +33,7 @@ class Client:
     metadata: Dict[str, Any] = field(default_factory=dict)
     created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
     last_interaction: Optional[datetime] = None
+    curator_id: Optional[str] = None
 
     def to_dict(self) -> Dict[str, Any]:
         return {

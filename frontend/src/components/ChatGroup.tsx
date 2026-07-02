@@ -7,9 +7,10 @@ interface ChatGroupProps {
   channelLabel: string
   selectedId: string | null
   onSelect: (msg: Message) => void
+  onReply?: (msg: Message) => void
 }
 
-export function ChatGroup({ messages, senderLabel, channelLabel, selectedId, onSelect }: ChatGroupProps) {
+export function ChatGroup({ messages, senderLabel, channelLabel, selectedId, onSelect, onReply }: ChatGroupProps) {
   const isOwn = messages[0].sender_id === "agent"
   return (
     <div className={`flex flex-col ${isOwn ? 'items-end' : 'items-start'}`}>
@@ -24,6 +25,7 @@ export function ChatGroup({ messages, senderLabel, channelLabel, selectedId, onS
           channelLabel={channelLabel}
           selected={selectedId === msg.id}
           onSelect={onSelect}
+          onReply={onReply}
         />
       ))}
     </div>

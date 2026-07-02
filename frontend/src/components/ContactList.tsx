@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
+import { Avatar } from './Avatar'
 
 export interface ContactChannel {
   channel: string
@@ -23,6 +24,7 @@ interface ContactListProps {
   activeKey: string | null
   activeChannel: string | null
   unreadCounts: Map<string, number>
+  delegatedKeys: Set<string>
   onSelect: (contact: Contact) => void
 }
 
@@ -61,7 +63,7 @@ function formatTime(ts: string): string {
 
 type SortMode = 'time_desc' | 'time_asc' | 'name_asc' | 'name_desc'
 
-export function ContactList({ contacts, activeKey, activeChannel, unreadCounts, onSelect }: ContactListProps) {
+export function ContactList({ contacts, activeKey, activeChannel, unreadCounts, delegatedKeys, onSelect }: ContactListProps) {
   const [search, setSearch] = useState('')
   const [sortBy, setSortBy] = useState<SortMode>('time_desc')
   const [unreadOnly, setUnreadOnly] = useState(false)
@@ -142,13 +144,7 @@ export function ContactList({ contacts, activeKey, activeChannel, unreadCounts, 
             else onSelect(contact)
           }}
         >
-          {contact.avatarUrl ? (
-            <img src={contact.avatarUrl} alt="" className="h-11 w-11 shrink-0 rounded-full object-cover" />
-          ) : (
-            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-blue-100 text-sm font-bold text-blue-600 dark:bg-blue-900 dark:text-blue-300">
-              {contact.name.charAt(0).toUpperCase()}
-            </div>
-          )}
+          <Avatar name={contact.name} size="md" />
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-1">
               {contact.channels.map((ch) => {
@@ -168,7 +164,12 @@ export function ContactList({ contacts, activeKey, activeChannel, unreadCounts, 
               })}
             </div>
             <div className="flex items-center justify-between">
-              <span className="truncate text-sm font-medium text-gray-900 dark:text-gray-100">{contact.name}</span>
+              <span className="truncate text-sm font-medium text-gray-900 dark:text-gray-100">
+                {delegatedKeys.has(contact.key) && (
+                  <span className="mr-1.5 inline-block align-middle text-sm" title="Делегировано вам">🔔</span>
+                )}
+                {contact.name}
+              </span>
               <div className="flex shrink-0 items-center gap-1.5 pl-2">
                 {(() => {
                   const cnt = totalUnread(contact, unreadCounts)

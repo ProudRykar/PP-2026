@@ -30,6 +30,7 @@ class PostgresClientRepository(ClientRepository):
                 metadata_=client.metadata or {},
                 created_at=client.created_at,
                 last_interaction=client.last_interaction,
+                curator_id=client.curator_id,
             )
             session.add(model)
             await session.flush()
@@ -94,6 +95,7 @@ class PostgresClientRepository(ClientRepository):
             model.avatar_url = client.avatar_url  # type: ignore[assignment]
             model.metadata_ = client.metadata or {}  # type: ignore[assignment]
             model.last_interaction = client.last_interaction  # type: ignore[assignment]
+            model.curator_id = client.curator_id  # type: ignore[assignment]
 
             await session.execute(
                 delete(ClientChannelModel).where(
@@ -149,4 +151,5 @@ class PostgresClientRepository(ClientRepository):
             metadata=cast(dict, m.metadata_ if m.metadata_ else {}),
             created_at=cast(datetime, m.created_at),
             last_interaction=cast(Optional[datetime], m.last_interaction),
+            curator_id=cast(Optional[str], m.curator_id),
         )

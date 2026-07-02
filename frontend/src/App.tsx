@@ -1,12 +1,14 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import type { Message, Client, Curator } from './types'
-import { fetchMessages, fetchChannels, fetchHealth, fetchAllClients, fetchCurators as apiFetchCurators } from './api'
+import { fetchMessages, fetchChannels, fetchHealth, fetchAllClients, fetchCurators as apiFetchCurators, assignCurator, transferCurator, fetchCuratorAssignments } from './api'
 import { MessageList } from './components/MessageList'
 import { ChatInput } from './components/ChatInput'
 import { EmailReplyForm } from './components/EmailReplyForm'
+import { Avatar } from './components/Avatar'
 import { ClientCard } from './components/ClientCard'
 import { ContactList, type Contact, type ContactChannel } from './components/ContactList'
 import { ThemeToggle } from './components/ThemeToggle'
+import { Footer } from './components/Footer'
 import { useWebSocket } from './hooks/useWebSocket'
 import { LoginPage } from './components/LoginPage'
 import { RegisterPage } from './components/RegisterPage'
@@ -23,11 +25,15 @@ export default function App() {
   const [activeContact, setActiveContact] = useState<Contact | null>(null)
 
   const [curators, setCurators] = useState<Curator[]>([])
-  const [curatorFilter, setCuratorFilter] = useState<string | null>(null)
   const [showClientCard, setShowClientCard] = useState(false)
   const [unreadCounts, setUnreadCounts] = useState<Map<string, number>>(new Map())
   const [readMessageIds, setReadMessageIds] = useState<Set<string>>(new Set())
   const countedUnreadRef = useRef(new Set<string>())
+  const [delegationNotif, setDelegationNotif] = useState<{ fromName: string; entryId: string; clientName: string; channel: string }[] | null>(null)
+  const shownDelegationsRef = useRef(new Set<string>())
+  const [delegatedContactKeys, setDelegatedContactKeys] = useState<Set<string>>(new Set())
+  const [showDelegatePopup, setShowDelegatePopup] = useState(false)
+  const [pendingAction, setPendingAction] = useState<string | null>(null)
 
   console.debug('[App] render:', { isAuthenticated, authLoading, curator: curator?.full_name, msgs: allMessages.length, backendOk })
 
@@ -39,8 +45,8 @@ export default function App() {
       try {
         console.debug('[App] starting data load...')
         const [healthOk, channelsOk, curators, [msgs, cls]] = await Promise.all([
-          fetchHealth().then(r => { console.debug('[App] health ok'); return true }).catch(e => { console.debug('[App] health fail:', e); return false }),
-          fetchChannels().then(r => { console.debug('[App] channels ok'); return true }).catch(e => { console.debug('[App] channels fail:', e); return false }),
+          fetchHealth().then(() => { console.debug('[App] health ok'); return true }).catch(e => { console.debug('[App] health fail:', e); return false }),
+          fetchChannels().then(() => { console.debug('[App] channels ok'); return true }).catch(e => { console.debug('[App] channels fail:', e); return false }),
           apiFetchCurators().catch(e => { console.debug('[App] curators fail:', e); return [] }),
           Promise.all([
             fetchMessages().catch(e => { console.debug('[App] messages fail:', e); throw e }),
@@ -58,13 +64,53 @@ export default function App() {
         const map = new Map<string, Client>()
         for (const c of cls) map.set(c.id, c)
         setClients(map)
+        if (curator) {
+          try {
+            const history = await fetchCuratorAssignments(curator.id)
+            const seen = new Set(JSON.parse(localStorage.getItem('seen_delegations') ?? '[]'))
+            for (const id of shownDelegationsRef.current) seen.add(id)
+            const unseen = history
+              .filter(e => e.to_curator_id === curator.id && e.from_curator_id && !seen.has(e.id))
+              .sort((a, b) => new Date(b.created_at!).getTime() - new Date(a.created_at!).getTime())
+            const delegatedKeys = new Set<string>()
+            if (unseen.length > 0) {
+              const items: { fromName: string; entryId: string; clientName: string; channel: string }[] = []
+              for (const e of unseen) {
+                seen.add(e.id)
+                shownDelegationsRef.current.add(e.id)
+                const fromCurator = curators.find(c => c.id === e.from_curator_id)
+                const msg = msgs.find(m => m.id === e.message_id)
+                const client = msg ? findClientForMessage(msg, map) : null
+                if (msg) delegatedKeys.add(convKey(msg))
+                items.push({
+                  fromName: fromCurator?.full_name ?? 'Куратор',
+                  entryId: e.id,
+                  clientName: clientDisplayName(msg, client),
+                  channel: msg?.channel ?? '',
+                })
+              }
+              localStorage.setItem('seen_delegations', JSON.stringify([...seen]))
+              setDelegationNotif(items)
+            }
+            setDelegatedContactKeys(delegatedKeys)
+            if (delegatedKeys.size > 0) {
+              setUnreadCounts(prev => {
+                const next = new Map(prev)
+                for (const key of delegatedKeys) {
+                  if (!next.get(key)) next.set(key, 1)
+                }
+                return next
+              })
+            }
+          } catch {}
+        }
       } catch (e) {
         console.debug('[App] data load error:', e)
         if (!cancelled) setBackendOk(false)
       }
     })()
     return () => { console.debug('[App] data effect cleanup'); cancelled = true }
-  }, [isAuthenticated])
+  }, [isAuthenticated, curator])
 
   useWebSocket((data) => {
     const ev = data as Record<string, unknown>
@@ -109,6 +155,36 @@ export default function App() {
       setAllMessages(prev => prev.map(m =>
         m.id === ev.message_id ? { ...m, curator_id: ev.curator_id as string } : m
       ))
+      if (curator && ev.curator_id === curator.id && ev.assigned_by && ev.assigned_by !== curator.id) {
+        const assignerId = ev.assigned_by as string
+        const assigner = curators.find(c => c.id === assignerId)
+        if (assigner) {
+          const eid = (ev.assignment_id as string) ?? ev.message_id as string
+          if (shownDelegationsRef.current.has(eid)) return
+          shownDelegationsRef.current.add(eid)
+          const seen = new Set(JSON.parse(localStorage.getItem('seen_delegations') ?? '[]'))
+          seen.add(eid)
+          localStorage.setItem('seen_delegations', JSON.stringify([...seen]))
+          const msg = allMessages.find(m => m.id === ev.message_id)
+          const client = msg ? findClientForMessage(msg, clients) : null
+          if (msg) {
+            const key = convKey(msg)
+            setDelegatedContactKeys(prev => new Set(prev).add(key))
+            setUnreadCounts(prev => {
+              if (prev.get(key) && prev.get(key)! > 0) return prev
+              const next = new Map(prev)
+              next.set(key, (next.get(key) || 0) + 1)
+              return next
+            })
+          }
+          setDelegationNotif(prev => {
+            const item = { fromName: assigner.full_name, entryId: eid, clientName: clientDisplayName(msg, client), channel: msg?.channel ?? '' }
+            if (prev === null) return [item]
+            if (prev.some(d => d.entryId === eid)) return prev
+            return [...prev, item]
+          })
+        }
+      }
     }
 
     if (ev.type === 'curator_transferred' && typeof ev.message_id === 'string') {
@@ -116,6 +192,43 @@ export default function App() {
       setAllMessages(prev => prev.map(m =>
         m.id === ev.message_id ? { ...m, curator_id: ev.curator_id as string } : m
       ))
+      if (curator && ev.to_curator_id === curator.id) {
+        const fromId = ev.from_curator_id as string
+        const fromCurator = curators.find(c => c.id === fromId)
+        if (fromCurator) {
+          const eid = (ev.assignment_id as string) ?? ev.message_id as string
+          if (shownDelegationsRef.current.has(eid)) return
+          shownDelegationsRef.current.add(eid)
+          const seen = new Set(JSON.parse(localStorage.getItem('seen_delegations') ?? '[]'))
+          seen.add(eid)
+          localStorage.setItem('seen_delegations', JSON.stringify([...seen]))
+          const msg = allMessages.find(m => m.id === ev.message_id)
+          const client = msg ? findClientForMessage(msg, clients) : null
+          if (msg) {
+            const key = convKey(msg)
+            setDelegatedContactKeys(prev => new Set(prev).add(key))
+            setUnreadCounts(prev => {
+              if (prev.get(key) && prev.get(key)! > 0) return prev
+              const next = new Map(prev)
+              next.set(key, (next.get(key) || 0) + 1)
+              return next
+            })
+          }
+          setDelegationNotif(prev => {
+            const item = { fromName: fromCurator.full_name, entryId: eid, clientName: clientDisplayName(msg, client), channel: msg?.channel ?? '' }
+            if (prev === null) return [item]
+            if (prev.some(d => d.entryId === eid)) return prev
+            return [...prev, item]
+          })
+        }
+      } else if (curator && ev.from_curator_id === curator.id) {
+        const msg = allMessages.find(m => m.id === ev.message_id)
+        if (msg) setDelegatedContactKeys(prev => {
+          const next = new Set(prev)
+          next.delete(convKey(msg))
+          return next
+        })
+      }
     }
   })
 
@@ -225,12 +338,9 @@ export default function App() {
 
   const filteredMessages = useMemo(() => {
     if (!activeContact) return []
-    let msgs = allMessages.filter((m) => msgMatch(m, activeContact.channel, activeContact.senderId))
-    if (curatorFilter) {
-      msgs = msgs.filter(m => m.curator_id === curatorFilter)
-    }
+    const msgs = allMessages.filter((m) => msgMatch(m, activeContact.channel, activeContact.senderId))
     return msgs.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime())
-  }, [activeContact, allMessages, curatorFilter])
+  }, [activeContact, allMessages])
 
   const markRead = useCallback((id: string) => {
     setReadMessageIds(prev => {
@@ -276,6 +386,51 @@ export default function App() {
     setShowClientCard(false)
   }, [markRead])
 
+  const handleReplyMessage = useCallback((msg: Message) => {
+    setSelected(msg)
+    markRead(msg.id)
+    setShowClientCard(false)
+  }, [markRead])
+
+  const handleTakeTicket = useCallback(async (messageId: string) => {
+    if (!curator || pendingAction) return
+    setPendingAction(messageId)
+    try {
+      await assignCurator(messageId, { curator_id: curator.id })
+      setAllMessages(prev => prev.map(m =>
+        m.id === messageId ? { ...m, curator_id: curator.id } : m
+      ))
+      setSelected(prev => prev?.id === messageId ? { ...prev, curator_id: curator.id } : prev)
+    } catch (e) {
+      console.error('[App] take ticket failed:', e)
+    } finally {
+      setPendingAction(null)
+    }
+  }, [curator, pendingAction])
+
+  const handleDelegate = useCallback(async (messageId: string, toCuratorId: string) => {
+    if (!curator || pendingAction) return
+    setPendingAction(messageId)
+    try {
+      await transferCurator(messageId, { from_curator_id: curator.id, to_curator_id: toCuratorId })
+      setAllMessages(prev => prev.map(m =>
+        m.id === messageId ? { ...m, curator_id: toCuratorId } : m
+      ))
+      setSelected(prev => prev?.id === messageId ? { ...prev, curator_id: toCuratorId } : prev)
+    } catch (e) {
+      console.error('[App] delegate failed:', e)
+    } finally {
+      setPendingAction(null)
+    }
+  }, [curator, pendingAction])
+
+  useEffect(() => {
+    if (!showDelegatePopup) return
+    const close = () => setShowDelegatePopup(false)
+    document.addEventListener('click', close)
+    return () => document.removeEventListener('click', close)
+  }, [showDelegatePopup])
+
   if (!isAuthenticated) {
     if (authLoading) {
       return (
@@ -300,53 +455,42 @@ export default function App() {
   }
 
   return (
-    <div className="flex h-screen bg-gray-100 dark:bg-gray-950">
-      <div className="relative z-10 flex w-80 shrink-0 flex-col bg-white shadow-sm dark:bg-gray-800">
-        <div className="flex items-center justify-between border-b border-gray-200 bg-gray-800 px-4 py-3 text-white dark:border-gray-700">
-          <div className="min-w-0">
-            <h1 className="text-lg font-bold">Омниканал</h1>
-            <p className="mt-0.5 text-xs text-gray-300">{contacts.length} контактов</p>
-          </div>
-          <div className="flex items-center gap-2 shrink-0">
-            <div className="hidden truncate text-right text-xs text-gray-300 sm:block">
-              <p className="font-medium text-white">{curator?.full_name}</p>
-              <p className="text-gray-400">{curator?.role}</p>
-            </div>
-            <button
-              onClick={logout}
-              className="flex h-8 w-8 items-center justify-center rounded-lg text-gray-300 transition hover:bg-gray-700 hover:text-white"
-              title="Выйти"
-            >
-              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-              </svg>
-            </button>
-            <ThemeToggle />
-          </div>
+    <div className="flex h-screen flex-col bg-gray-100 dark:bg-gray-950">
+      <div className="flex items-center justify-between border-b border-gray-200 bg-gray-800 px-4 py-3 text-white dark:border-gray-700 shrink-0">
+        <div className="min-w-0">
+          <h1 className="text-lg font-bold">Омниканал</h1>
+          <p className="mt-0.5 text-xs text-gray-300">{contacts.length} контактов</p>
         </div>
-        {curators.length > 0 && (
-          <div className="border-b border-gray-200 px-3 py-2 dark:border-gray-700">
-            <select
-              className="w-full rounded-lg bg-gray-100 px-2 py-1.5 text-xs outline-none dark:bg-gray-700 dark:text-gray-300"
-              value={curatorFilter ?? ''}
-              onChange={e => setCuratorFilter(e.target.value || null)}
-            >
-              <option value="">Все кураторы</option>
-              {curators.filter(c => c.status === 'active').map(c => (
-                <option key={c.id} value={c.id}>{c.full_name}</option>
-              ))}
-            </select>
+        <div className="flex items-center gap-2 shrink-0">
+          <div className="hidden truncate text-right text-xs text-gray-300 sm:block">
+            <p className="font-medium text-white">{curator?.full_name}</p>
+            <p className="text-gray-400">{curator?.role}</p>
           </div>
-        )}
+          <button
+            onClick={logout}
+            className="flex h-8 w-8 items-center justify-center rounded-lg text-gray-300 transition hover:bg-gray-700 hover:text-white"
+            title="Выйти"
+          >
+            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+            </svg>
+          </button>
+          <ThemeToggle />
+        </div>
+      </div>
+      <div className="flex flex-1 overflow-hidden">
+        <div className="relative z-10 flex w-80 shrink-0 flex-col bg-white shadow-sm dark:bg-gray-800">
         <div className="min-h-0 flex-1 overflow-hidden">
           <ContactList
             contacts={contacts}
             activeKey={activeContact?.key ?? null}
             activeChannel={activeContact?.channel ?? null}
             unreadCounts={unreadCounts}
+            delegatedKeys={delegatedContactKeys}
             onSelect={handleSelectContact}
           />
         </div>
+        <Footer curatorName={curator?.full_name} curatorRole={curator?.role} />
       </div>
 
       <div className="flex flex-1 flex-col bg-white shadow-sm dark:bg-gray-900">
@@ -358,31 +502,75 @@ export default function App() {
                   channel={activeContact.channel}
                   senderId={activeContact.senderId}
                   onClose={() => setShowClientCard(false)}
+                  messageCuratorId={selected?.curator_id ?? null}
                 />
               </div>
             )}
-            <div className="flex items-center justify-between border-b border-gray-200 bg-gray-50 px-4 py-3 dark:border-gray-700 dark:bg-gray-800">
-              <div className="flex items-center gap-3">
-                {activeContact.avatarUrl ? (
-                  <img src={activeContact.avatarUrl} alt="" className="h-10 w-10 rounded-full object-cover" />
-                ) : (
-                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-100 text-sm font-bold text-blue-600 dark:bg-blue-900 dark:text-blue-300">
-                    {activeContact.name.charAt(0).toUpperCase()}
+            <div className="border-b border-gray-200 bg-gray-50 px-4 py-3 dark:border-gray-700 dark:bg-gray-800">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <Avatar name={activeContact.name} size="sm" />
+                  <div>
+                    <p className="text-base font-semibold text-gray-800 dark:text-gray-100">{activeContact.name}</p>
+                    <p className="text-xs text-gray-400 dark:text-gray-500">{activeContact.channel}</p>
                   </div>
-                )}
-                <div>
-                  <p className="text-base font-semibold text-gray-800 dark:text-gray-100">{activeContact.name}</p>
-                  <p className="text-xs text-gray-400 dark:text-gray-500">{activeContact.channel}</p>
                 </div>
+                {activeContact.clientId && (
+                  <button
+                    className="rounded-lg bg-white px-4 py-2 text-sm font-medium text-gray-600 shadow-sm ring-1 ring-gray-200 transition hover:bg-gray-50 dark:bg-gray-700 dark:text-gray-300 dark:ring-gray-600 dark:hover:bg-gray-600"
+                    onClick={() => setShowClientCard(!showClientCard)}
+                  >
+                    {showClientCard ? 'Закрыть профиль' : 'Профиль'}
+                  </button>
+                )}
               </div>
-              {activeContact.clientId && (
-                <button
-                  className="rounded-lg bg-white px-4 py-2 text-sm font-medium text-gray-600 shadow-sm ring-1 ring-gray-200 transition hover:bg-gray-50 dark:bg-gray-700 dark:text-gray-300 dark:ring-gray-600 dark:hover:bg-gray-600"
-                  onClick={() => setShowClientCard(!showClientCard)}
-                >
-                  {showClientCard ? 'Закрыть профиль' : 'Профиль'}
-                </button>
-              )}
+              <div className="mt-2 flex items-center gap-2">
+                {(() => {
+                  const msgCur = selected?.curator_id ?? null
+                  const isMyTicket = msgCur && msgCur === curator?.id
+                  const canTake = !!selected && !isMyTicket && !!curator?.id
+                  if (!selected) return null
+                  if (!isMyTicket) {
+                    const loading = pendingAction === selected.id
+                    return (
+                      <button
+                        className="rounded bg-blue-600 px-3 py-1 text-xs text-white hover:bg-blue-700 disabled:opacity-50 dark:bg-blue-700 dark:hover:bg-blue-600"
+                        disabled={!canTake || !!pendingAction}
+                        onClick={() => handleTakeTicket(selected.id)}
+                      >
+                        {loading ? '...' : 'Взять обращение'}
+                      </button>
+                    )
+                  }
+                  return (
+                    <div className="relative">
+                      <button
+                        className="rounded bg-green-600 px-3 py-1 text-xs text-white hover:bg-green-700 disabled:opacity-50 dark:bg-green-700 dark:hover:bg-green-600"
+                        disabled={!!pendingAction}
+                        onClick={(e) => { e.stopPropagation(); setShowDelegatePopup(true) }}
+                      >
+                        Делегировать
+                      </button>
+                      {showDelegatePopup && (
+                        <div
+                          className="absolute left-0 z-10 mt-1 max-h-32 w-48 overflow-y-auto rounded-lg border bg-white p-1 shadow-lg dark:border-gray-600 dark:bg-gray-800"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          {curators.filter(c => c.id !== curator?.id && c.status === 'active').map(c => (
+                            <button
+                              key={c.id}
+                              className="block w-full rounded px-2 py-1 text-left text-xs hover:bg-gray-100 dark:hover:bg-gray-700"
+                              onClick={() => { handleDelegate(selected.id, c.id); setShowDelegatePopup(false) }}
+                            >
+                              {c.full_name}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )
+                })()}
+              </div>
             </div>
             <div className="flex-1 overflow-y-auto px-4">
               <MessageList
@@ -390,7 +578,9 @@ export default function App() {
                 loading={authLoading}
                 selectedId={selected?.id ?? null}
                 onSelect={handleSelectMessage}
+                onReply={handleReplyMessage}
                 readMessageIds={readMessageIds}
+                curatorName={curator?.full_name}
               />
             </div>
             {selected?.channel === 'email' ? (
@@ -407,14 +597,52 @@ export default function App() {
             </div>
           </div>
         )}
+        </div>
       </div>
+      {delegationNotif && delegationNotif.length > 0 && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30" onClick={() => setDelegationNotif(null)}>
+          <div className="mx-4 w-full max-w-sm rounded-xl border border-green-200 bg-white p-6 shadow-xl dark:border-green-800 dark:bg-gray-800" onClick={(e) => e.stopPropagation()}>
+            <div className="mb-4">
+              <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-green-100 text-2xl dark:bg-green-900">
+                🔔
+              </div>
+              <p className="text-center text-base font-semibold text-gray-800 dark:text-gray-100">
+                Новое делегирование{delegationNotif.length > 1 ? ` (${delegationNotif.length})` : ''}
+              </p>
+            </div>
+            <div className="mb-4 max-h-48 space-y-2 overflow-y-auto">
+              {delegationNotif.map(d => (
+                <p key={d.entryId} className="text-sm text-gray-600 dark:text-gray-400">
+                  {d.fromName} передал вам обращение от <span className="font-medium text-gray-800 dark:text-gray-200">{d.clientName}</span>
+                  {d.channel && <span className="text-gray-400"> ({d.channel})</span>}
+                </p>
+              ))}
+            </div>
+            <button
+              className="w-full rounded-lg bg-blue-600 py-2 text-sm font-medium text-white hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600"
+              onClick={() => {
+                const seen = new Set(JSON.parse(localStorage.getItem('seen_delegations') ?? '[]'))
+                for (const d of delegationNotif) {
+                  shownDelegationsRef.current.add(d.entryId)
+                  seen.add(d.entryId)
+                }
+                localStorage.setItem('seen_delegations', JSON.stringify([...seen]))
+                setDelegationNotif(null)
+              }}
+            >
+              Ок
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
 
 function findClientForMessage(msg: Message, clients: Map<string, Client>): Client | null {
-  const matchEmail = msg.sender_id.match(/<([^>]+)>/)
-  const lookupId = matchEmail ? matchEmail[1] : msg.sender_id
+  const rawId = msg.sender_id === 'agent' ? (msg.recipient ?? msg.sender_id) : msg.sender_id
+  const matchEmail = rawId.match(/<([^>]+)>/)
+  const lookupId = matchEmail ? matchEmail[1] : rawId
   for (const client of clients.values()) {
     for (const ch of client.channels) {
       if (ch.channel === msg.channel && ch.external_id === lookupId) {
@@ -423,4 +651,11 @@ function findClientForMessage(msg: Message, clients: Map<string, Client>): Clien
     }
   }
   return null
+}
+
+function clientDisplayName(msg: Message | undefined, client: Client | null): string {
+  if (client?.name) return client.name
+  if (!msg) return 'пользователь'
+  if (msg.sender_id === 'agent') return msg.recipient ?? 'пользователь'
+  return msg.sender_id
 }

@@ -22,6 +22,7 @@ class ClientResponse:
     metadata: dict[str, Any] | None = None
     created_at: Optional[datetime] = None
     last_interaction: Optional[datetime] = None
+    curator_id: Optional[str] = None
 
 
 @dataclass(slots=True)
@@ -31,3 +32,4 @@ class ClientUpdateRequest:
     email: Optional[str] = None
     avatar_url: Optional[str] = None
     metadata: Optional[dict[str, Any]] = None
+    curator_id: Optional[str] = None

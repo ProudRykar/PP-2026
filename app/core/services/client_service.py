@@ -118,6 +118,8 @@ class ClientService:
         for key in ("name", "phone", "email", "avatar_url"):
             if key in updates and updates[key] is not None:
                 setattr(client, key, updates[key])
+        if "curator_id" in updates:
+            client.curator_id = updates["curator_id"] or None
         if "metadata" in updates and updates["metadata"] is not None:
             client.metadata.update(updates["metadata"])
 

@@ -9,6 +9,8 @@ from app.core.ports.curator_repository import (
     AssignmentHistoryRepository,
 )
 from app.core.ports.message_repository import MessageRepository
+from app.core.ports.client_repository import ClientRepository
+from app.core.domain.models.client import Client
 from app.core.services.curator_service import CuratorService
 from app.core.errors.curator import (
     CuratorNotFoundError,
@@ -106,6 +108,38 @@ class MockMessageRepository(MessageRepository):
             msg.curator_id = curator_id
 
 
+class MockClientRepository(ClientRepository):
+    def __init__(self):
+        self._clients: dict[str, Client] = {}
+
+    async def save(self, client: Client) -> None:
+        self._clients[client.id] = client
+
+    async def get_by_id(self, client_id: str) -> Optional[Client]:
+        return self._clients.get(client_id)
+
+    async def find_by_channel(self, channel: str, external_id: str) -> Optional[Client]:
+        for c in self._clients.values():
+            for ch in c.channels:
+                if ch.channel == channel and ch.external_id == external_id:
+                    return c
+        return None
+
+    async def find_by_email(self, email: str) -> Optional[Client]:
+        for c in self._clients.values():
+            if c.email == email:
+                return c
+        return None
+
+    async def update(self, client: Client) -> None:
+        if client.id not in self._clients:
+            raise ValueError(f"Client {client.id} not found")
+        self._clients[client.id] = client
+
+    async def get_all(self) -> list[Client]:
+        return list(self._clients.values())
+
+
 @pytest.fixture
 def curator_repo() -> MockCuratorRepository:
     return MockCuratorRepository()
@@ -122,12 +156,18 @@ def message_repo() -> MockMessageRepository:
 
 
 @pytest.fixture
+def client_repo() -> MockClientRepository:
+    return MockClientRepository()
+
+
+@pytest.fixture
 def service(
     curator_repo: MockCuratorRepository,
     assignment_repo: MockAssignmentHistoryRepository,
     message_repo: MockMessageRepository,
+    client_repo: MockClientRepository,
 ) -> CuratorService:
-    return CuratorService(curator_repo, assignment_repo, message_repo)
+    return CuratorService(curator_repo, assignment_repo, message_repo, client_repo)
 
 
 def make_curator(**kwargs) -> Curator:

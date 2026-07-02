@@ -33,6 +33,7 @@ def _to_response(client) -> ClientResponse:
         metadata=client.metadata,
         created_at=client.created_at,
         last_interaction=client.last_interaction,
+        curator_id=client.curator_id,
     )
 
 

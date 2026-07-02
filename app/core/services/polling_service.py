@@ -29,10 +29,13 @@ class PollingOrchestrator(AbstractPollingService):
     async def start_polling(self) -> None:
         self._running = True
         for engine in self._engines:
-            await engine.start()
-            task = asyncio.create_task(self._poll_engine(engine))
-            self._tasks.append(task)
-            logger.info(f"Polling started for {engine.channel_type}")
+            try:
+                await engine.start()
+                task = asyncio.create_task(self._poll_engine(engine))
+                self._tasks.append(task)
+                logger.info(f"Polling started for {engine.channel_type}")
+            except Exception as e:
+                logger.error(f"Failed to start {engine.channel_type} engine: {e}")
 
         logger.info(f"Polling started for {len(self._engines)} engines")
 

@@ -1,24 +1,32 @@
 import { useState, useEffect } from 'react'
-import type { Client, ClientUpdatePayload } from '../types'
-import { fetchClientByChannel, updateClient } from '../api'
+import type { Client, ClientUpdatePayload, Curator } from '../types'
+import { fetchClientByChannel, updateClient, fetchCurators, assignClientCurator } from '../api'
+import { Avatar } from './Avatar'
 
 interface ClientCardProps {
   channel: string
   senderId: string
   onClose: () => void
+  messageCuratorId?: string | null
 }
 
-export function ClientCard({ channel, senderId, onClose }: ClientCardProps) {
+export function ClientCard({ channel, senderId, onClose, messageCuratorId }: ClientCardProps) {
   const [client, setClient] = useState<Client | null>(null)
   const [loading, setLoading] = useState(true)
   const [editing, setEditing] = useState(false)
   const [form, setForm] = useState<ClientUpdatePayload>({})
+  const [curators, setCurators] = useState<Curator[]>([])
+  const [showCuratorSelect, setShowCuratorSelect] = useState(false)
 
   useEffect(() => {
     setLoading(true)
-    fetchClientByChannel(channel, senderId)
-      .then((c) => {
+    Promise.all([
+      fetchClientByChannel(channel, senderId),
+      fetchCurators('active'),
+    ])
+      .then(([c, cur]) => {
         setClient(c)
+        setCurators(cur)
         if (c) {
           setForm({ name: c.name, phone: c.phone ?? '', email: c.email ?? '', avatar_url: c.avatar_url ?? '' })
         }
@@ -32,6 +40,23 @@ export function ClientCard({ channel, senderId, onClose }: ClientCardProps) {
     const updated = await updateClient(client.id, form)
     setClient(updated)
     setEditing(false)
+  }
+
+  const handleAssignCurator = async (curatorId: string) => {
+    if (!client) return
+    try {
+      const updated = await assignClientCurator(client.id, curatorId)
+      setClient(updated)
+      setShowCuratorSelect(false)
+    } catch {}
+  }
+
+  const handleRemoveCurator = async () => {
+    if (!client) return
+    try {
+      const updated = await assignClientCurator(client.id, '')
+      setClient(updated)
+    } catch {}
   }
 
   if (loading) {
@@ -57,6 +82,9 @@ export function ClientCard({ channel, senderId, onClose }: ClientCardProps) {
     vk: { label: 'VK', icon: '🌐' },
   }
 
+  const assignedCurator = curators.find(c => c.id === client.curator_id)
+  const messageCurator = curators.find(c => c.id === messageCuratorId)
+
   return (
     <div className="rounded-lg border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
       <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3 dark:border-gray-700">
@@ -76,13 +104,7 @@ export function ClientCard({ channel, senderId, onClose }: ClientCardProps) {
 
       <div className="p-4">
         <div className="mb-3 flex items-center gap-3">
-          {client.avatar_url ? (
-            <img src={client.avatar_url} alt="" className="h-10 w-10 rounded-full object-cover" />
-          ) : (
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-100 text-sm font-bold text-blue-600 dark:bg-blue-900 dark:text-blue-300">
-              {client.name.charAt(0).toUpperCase()}
-            </div>
-          )}
+          <Avatar name={client.name} size="sm" />
           <div className="min-w-0 flex-1">
             {editing ? (
               <input
@@ -131,6 +153,52 @@ export function ClientCard({ channel, senderId, onClose }: ClientCardProps) {
           </div>
         </div>
 
+        <div className="relative mb-3">
+          <p className="mb-1 text-xs font-medium text-gray-500 dark:text-gray-400">Куратор</p>
+          {assignedCurator ? (
+            <div className="flex items-center gap-2">
+              <span className="rounded bg-green-100 px-2 py-0.5 text-xs text-green-700 dark:bg-green-900 dark:text-green-300">
+                {assignedCurator.full_name}
+              </span>
+              <button
+                className="text-[10px] text-blue-500 hover:text-blue-700 dark:text-blue-400"
+                onClick={() => setShowCuratorSelect(!showCuratorSelect)}
+              >
+                Заменить
+              </button>
+              <button
+                className="text-[10px] text-gray-400 hover:text-gray-600 dark:text-gray-500"
+                onClick={handleRemoveCurator}
+              >
+                Снять
+              </button>
+            </div>
+          ) : (
+            <button
+              className="rounded bg-gray-100 px-2 py-0.5 text-xs text-gray-500 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-400 dark:hover:bg-gray-600"
+              onClick={() => { fetchCurators('active').then(setCurators).then(() => setShowCuratorSelect(!showCuratorSelect)).catch(() => {}) }}
+            >
+              + Назначить куратора
+            </button>
+          )}
+          {showCuratorSelect && (
+            <div
+              className="absolute left-0 z-10 mt-1 max-h-32 w-full overflow-y-auto rounded-lg border bg-white p-1 shadow-lg dark:border-gray-600 dark:bg-gray-800"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {curators.filter(c => c.id !== client.curator_id).map(c => (
+                <button
+                  key={c.id}
+                  className="block w-full rounded px-2 py-1 text-left text-xs hover:bg-gray-100 dark:hover:bg-gray-700"
+                  onClick={() => handleAssignCurator(c.id)}
+                >
+                  {c.full_name}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
         <div className="mb-2">
           <p className="mb-1 text-xs font-medium text-gray-500 dark:text-gray-400">Каналы связи</p>
           <div className="flex flex-wrap gap-1.5">
@@ -146,6 +214,11 @@ export function ClientCard({ channel, senderId, onClose }: ClientCardProps) {
                 </span>
               )
             })}
+            {messageCurator && (
+              <span className="inline-flex items-center gap-1 rounded-full bg-green-100 px-2.5 py-0.5 text-xs text-green-700 dark:bg-green-900 dark:text-green-300">
+                👤 {messageCurator.full_name}
+              </span>
+            )}
           </div>
         </div>
 
