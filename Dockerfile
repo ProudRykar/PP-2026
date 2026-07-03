@@ -18,5 +18,9 @@ COPY app/ app/
 COPY alembic/ alembic/
 COPY alembic.ini .
 COPY main.py .
+COPY _alembic_helpers.py .
+COPY entrypoint.sh /app/entrypoint.sh
+RUN chmod +x /app/entrypoint.sh
 EXPOSE 8044
+ENTRYPOINT ["/app/entrypoint.sh"]
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8044"]

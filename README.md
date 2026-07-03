@@ -226,7 +226,7 @@ docker compose up --build
 | PostgreSQL | `5432` | База данных |
 | MinIO | `9000` / `9001` | S3-хранилище (файлы) |
 
-При первом запуске миграции БД накатываются автоматически (SQLAlchemy create_all).
+При первом запуске миграции БД накатываются автоматически через Alembic (entrypoint.sh → alembic upgrade head).
 
 ### Особенности запуска
 

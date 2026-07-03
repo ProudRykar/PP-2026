@@ -7,6 +7,7 @@ Create Date: 2026-06-24
 
 from alembic import op  # type: ignore[attr-defined]
 import sqlalchemy as sa
+from _alembic_helpers import column_exists, index_exists
 
 revision = "007"
 down_revision = "006"
@@ -15,11 +16,13 @@ depends_on = None
 
 
 def upgrade() -> None:
-    op.add_column(
-        "clients",
-        sa.Column("curator_id", sa.String(), nullable=True),
-    )
-    op.create_index("ix_clients_curator_id", "clients", ["curator_id"])
+    if not column_exists("clients", "curator_id"):
+        op.add_column(
+            "clients",
+            sa.Column("curator_id", sa.String(), nullable=True),
+        )
+    if not index_exists("clients", "ix_clients_curator_id"):
+        op.create_index("ix_clients_curator_id", "clients", ["curator_id"])
 
 
 def downgrade() -> None:

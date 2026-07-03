@@ -29,8 +29,6 @@ class PostgresDatabaseGateway(DatabaseGateway):
         self._session_factory = async_sessionmaker(
             self._engine, class_=AsyncSession, expire_on_commit=False
         )
-        async with self._engine.begin() as conn:
-            await conn.run_sync(Base.metadata.create_all)
         logger.info("Database initialized")
 ```
 ---
