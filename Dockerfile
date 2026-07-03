@@ -21,6 +21,5 @@ COPY main.py .
 COPY _alembic_helpers.py .
 COPY entrypoint.sh /app/entrypoint.sh
 RUN chmod +x /app/entrypoint.sh
-EXPOSE 8044
 ENTRYPOINT ["/app/entrypoint.sh"]
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8044"]
+# Host and port are configured via APP_HOST/APP_PORT env vars in entrypoint.sh
