@@ -1,0 +1,44 @@
+\babel@toc {russian}{}\relax 
+\contentsline {chapter}{Введение}{3}{chapter*.2}%
+\contentsline {chapter}{\numberline {1}Теоретические основы омниканальных решений}{5}{chapter.1}%
+\contentsline {section}{\numberline {1.1}Понятие омниканальности}{5}{section.1.1}%
+\contentsline {section}{\numberline {1.2}Эволюция каналов взаимодействия с клиентами}{5}{section.1.2}%
+\contentsline {section}{\numberline {1.3}Ключевые компоненты омниканальной архитектуры}{6}{section.1.3}%
+\contentsline {section}{\numberline {1.4}Преимущества внедрения омниканальных решений}{7}{section.1.4}%
+\contentsline {section}{\numberline {1.5}Технологические аспекты реализации}{7}{section.1.5}%
+\contentsline {section}{\numberline {1.6}Отраслевые особенности применения}{8}{section.1.6}%
+\contentsline {chapter}{\numberline {2}Архитектура программного комплекса омниканального решения}{9}{chapter.2}%
+\contentsline {section}{\numberline {2.1}Общая архитектура системы}{9}{section.2.1}%
+\contentsline {section}{\numberline {2.2}Серверная часть (Backend)}{9}{section.2.2}%
+\contentsline {subsection}{\numberline {2.2.1}Архитектурный подход}{9}{subsection.2.2.1}%
+\contentsline {subsection}{\numberline {2.2.2}Схема слоёв бэкенда}{10}{subsection.2.2.2}%
+\contentsline {subsection}{\numberline {2.2.3}Технологический стек бэкенда}{10}{subsection.2.2.3}%
+\contentsline {subsection}{\numberline {2.2.4}API-эндпоинты}{10}{subsection.2.2.4}%
+\contentsline {section}{\numberline {2.3}Клиентская часть (Frontend)}{11}{section.2.3}%
+\contentsline {subsection}{\numberline {2.3.1}Структура пользовательского интерфейса}{11}{subsection.2.3.1}%
+\contentsline {subsection}{\numberline {2.3.2}Взаимодействие с сервером}{11}{subsection.2.3.2}%
+\contentsline {section}{\numberline {2.4}Схема базы данных}{12}{section.2.4}%
+\contentsline {section}{\numberline {2.5}Модуль интеграции каналов связи}{12}{section.2.5}%
+\contentsline {subsection}{\numberline {2.5.1}Модуль Telegram}{13}{subsection.2.5.1}%
+\contentsline {subsection}{\numberline {2.5.2}Модуль Email}{14}{subsection.2.5.2}%
+\contentsline {subsection}{\numberline {2.5.3}Планируемые каналы}{14}{subsection.2.5.3}%
+\contentsline {section}{\numberline {2.6}Взаимодействие компонентов}{14}{section.2.6}%
+\contentsline {subsection}{\numberline {2.6.1}Получение входящего сообщения}{14}{subsection.2.6.1}%
+\contentsline {subsection}{\numberline {2.6.2}Отправка ответа}{15}{subsection.2.6.2}%
+\contentsline {subsection}{\numberline {2.6.3}Назначение куратора}{15}{subsection.2.6.3}%
+\contentsline {chapter}{\numberline {3}Реализация программного комплекса}{17}{chapter.3}%
+\contentsline {section}{\numberline {3.1}Доменная модель}{17}{section.3.1}%
+\contentsline {section}{\numberline {3.2}Порты (интерфейсы)}{18}{section.3.2}%
+\contentsline {section}{\numberline {3.3}Бизнес-логика}{19}{section.3.3}%
+\contentsline {subsection}{\numberline {3.3.1}Сервис сообщений}{19}{subsection.3.3.1}%
+\contentsline {subsection}{\numberline {3.3.2}Оркестратор опроса каналов}{20}{subsection.3.3.2}%
+\contentsline {section}{\numberline {3.4}Адаптеры каналов связи}{21}{section.3.4}%
+\contentsline {subsection}{\numberline {3.4.1}Telegram}{21}{subsection.3.4.1}%
+\contentsline {subsection}{\numberline {3.4.2}Email}{23}{subsection.3.4.2}%
+\contentsline {subsection}{\numberline {3.4.3}Фабрика движков}{23}{subsection.3.4.3}%
+\contentsline {section}{\numberline {3.5}Репозиторий и ORM}{24}{section.3.5}%
+\contentsline {section}{\numberline {3.6}Контейнер внедрения зависимостей}{25}{section.3.6}%
+\contentsline {section}{\numberline {3.7}Конфигурация и развёртывание}{26}{section.3.7}%
+\contentsline {section}{\numberline {3.8}Тестирование}{27}{section.3.8}%
+\contentsline {chapter}{Заключение}{30}{chapter*.6}%
+\contentsline {chapter}{Приложение А. Исходный код проекта}{31}{appendix*.7}%

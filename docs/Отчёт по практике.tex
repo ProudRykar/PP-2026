@@ -1,0 +1,984 @@
+\documentclass[12pt,a4paper]{report}
+
+% Поля
+\usepackage[
+    left=30mm,
+    right=15mm,
+    top=20mm,
+    bottom=20mm
+]{geometry}
+
+% Кодировки и русский язык
+\usepackage[T2A]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[russian]{babel}
+
+% Шрифт Tempora (клон Times New Roman с кириллицей)
+\usepackage{tempora}
+
+% Математика
+\usepackage{amsmath,amssymb}
+
+% Графика
+\usepackage{graphicx}
+
+% Таблицы
+\usepackage{tabularx}
+\usepackage{array}
+
+% Списки (настройка отступов вручную)
+
+% Межстрочный интервал (полуторный)
+\linespread{1.5}
+
+% Абзацный отступ
+\usepackage{indentfirst}
+\setlength{\parindent}{12.5mm}
+
+% Гиперссылки
+\usepackage{hyperref}
+\hypersetup{colorlinks=true, linkcolor=black, citecolor=black, urlcolor=blue}
+
+% Подсветка кода (listings)
+\usepackage{xcolor}
+\usepackage{listings}
+\lstset{
+    language=Python,
+    basicstyle=\ttfamily\small,
+    backgroundcolor=\color{gray!7},
+    frame=single,
+    rulecolor=\color{gray!30},
+    numbers=left,
+    numberstyle=\tiny\color{gray!50},
+    numbersep=5pt,
+    breaklines=true,
+    breakatwhitespace=true,
+    keywordstyle=\color{blue!60!black}\bfseries,
+    commentstyle=\color{green!40!black},
+    stringstyle=\color{red!50!orange},
+    showstringspaces=false,
+    tabsize=4,
+    captionpos=b,
+    xleftmargin=20pt,
+    framexleftmargin=15pt,
+}
+
+% Нумерация страниц
+\usepackage{fancyhdr}
+\pagestyle{fancy}
+\fancyhf{}
+\fancyfoot[C]{\thepage}
+\renewcommand{\headrulewidth}{0pt}
+
+% Настройка заголовков разделов (вручную)
+\makeatletter
+\renewcommand{\chapter}{%
+  \clearpage\global\@topnum\z@
+  \@afterindenttrue
+  \secdef\@chapter\@schapter}
+\def\@chapter[#1]#2{%
+  \ifnum\c@secnumdepth>\m@ne
+    \refstepcounter{chapter}%
+    \addcontentsline{toc}{chapter}{\protect\numberline{\thechapter}#1}%
+  \else
+    \addcontentsline{toc}{chapter}{#1}%
+  \fi
+  \chaptermark{#1}%
+  \addtocontents{lof}{\protect\addvspace{10\p@}}%
+  \addtocontents{lot}{\protect\addvspace{10\p@}}%
+  \@makechapterhead{#2}\@afterheading}
+\def\@makechapterhead#1{%
+  \vspace*{20\p@}%
+  {\parindent\z@\centering\normalfont\bfseries\Large
+    Глава \thechapter\par\nobreak
+    \vskip 10\p@
+    #1\par\nobreak
+    \vspace{20\p@}}}
+\def\@makeschapterhead#1{%
+  \vspace*{20\p@}%
+  {\parindent\z@\centering\normalfont\bfseries\Large
+    #1\par\nobreak
+    \vspace{20\p@}}}
+\renewcommand{\section}{%
+  \@startsection{section}{1}{\z@}%
+  {-15pt}{10pt}%
+  {\centering\normalfont\bfseries\large}}
+\renewcommand{\subsection}{%
+  \@startsection{subsection}{2}{\z@}%
+  {-10pt}{5pt}%
+  {\normalfont\bfseries\large}}
+\makeatother
+
+\begin{document}
+
+\begin{titlepage}
+\begin{center}
+
+\textbf{МИНИСТЕРСТВО ЦИФРОВОГО РАЗВИТИЯ, СВЯЗИ И МАССОВЫХ КОММУНИКАЦИЙ РОССИЙСКОЙ ФЕДЕРАЦИИ}
+
+\vspace{0.3em}
+
+\parbox{0.9\textwidth}{\centering\small
+Ордена Трудового Красного Знамени федеральное государственное \\
+бюджетное образовательное учреждение \\
+высшего образования
+}
+
+\vspace{0.3em}
+
+\textbf{«Московский технический университет связи и информатики»} \\
+(МТУСИ)
+
+\vfill
+
+\textbf{\Large ОТЧЁТ} \\
+по производственной практике (проектно-технологической)
+
+\vfill
+
+\begin{flushright}
+\begin{minipage}{0.55\textwidth}
+\raggedleft
+\setlength{\parskip}{0.3em}
+
+\textbf{Выполнил:} \\
+Студент группы БПИ2304 \\
+Жуков Никита Александрович \\[0.5em]
+\makebox[\linewidth]{\hrulefill} \\[0.3em]
+(дата, подпись)
+
+\vspace{1em}
+
+\textbf{Проверил руководитель практики:} \\
+Жариков Александр Романович \\
+Руководитель отдела аналитики и архитектуры \\[0.5em]
+\makebox[\linewidth]{\hrulefill} \\[0.3em]
+(дата, подпись)
+\end{minipage}
+\end{flushright}
+
+\vfill
+
+\begin{center}
+Москва, 2026
+\end{center}
+
+\end{center}
+\end{titlepage}
+
+\tableofcontents
+\newpage
+
+\chapter*{Введение}
+\addcontentsline{toc}{chapter}{Введение}
+
+В современных условиях организации взаимодействия с клиентами и обучающимися сталкиваются с проблемой фрагментации каналов коммуникации. Электронная почта, мессенджеры (Telegram, WhatsApp), образовательные платформы и социальные сети генерируют потоки обращений, которые сложно обрабатывать централизованно. Мониторинг всех этих каналов по отдельности занимает значительное время, и существует высокий риск упустить важное сообщение. В связи с этим разработка «единого окна» коммуникации, объединяющего все каналы в общем интерфейсе оператора, является актуальной задачей в области программной инженерии.
+
+Производственная (проектно-технологическая) практика была направлена на закрепление теоретических знаний, полученных в процессе обучения, и приобретение практических навыков проектирования, разработки и развёртывания современных веб-приложений. Практика проходила в \textbf{ООО «ВИЖНЛАБС»}, где передо мной стояла задача создания омниканального решения для центра обучения компании.
+
+В рамках тестового задания требовалось исследовать существующие на рынке омниканальные платформы (Front, respond.io, Zendesk), сформулировать требования к «единому окну» коммуникации для центра обучения, а затем разработать собственное программное решение, позволяющее принимать и обрабатывать обращения из различных каналов в едином интерфейсе куратора. За основу было принято решение разрабатывать самописное решение, а не использовать готовую SaaS-платформу, поскольку это позволяет точно подстроить систему под реальные процессы центра обучения, особенности используемой образовательной платформы, внутренние роли кураторов и правила обработки обращений, а также сохранить полный контроль над данными и логикой распределения.
+
+\textbf{Целью практики} являлось участие в проектировании и разработке омниканальной платформы для центра обучения, обеспечивающей приём и обработку обращений из различных каналов связи в едином интерфейсе куратора.
+
+В ходе выполнения практики были поставлены и решены следующие \textbf{задачи}:
+\begin{enumerate}
+    \item Изучить теоретические основы омниканальных решений, проанализировать отличия омниканального подхода от мультиканального.
+    \item Спроектировать архитектуру системы, обеспечивающую модульность, расширяемость и слабую связанность компонентов.
+    \item Реализовать серверную часть приложения с использованием современных технологий (Python, Litestar, PostgreSQL).
+    \item Разработать клиентский интерфейс оператора на базе веб-технологий (React, TypeScript, WebSocket).
+    \item Интегрировать каналы связи (Telegram, Email) через единый интерфейс движка сообщений.
+    \item Развернуть систему с использованием контейнеризации Docker и провести тестирование ключевых сценариев работы.
+\end{enumerate}
+
+Выполнение данных задач позволило получить практические навыки проектирования архитектуры программных систем, разработки серверных приложений на языке Python с использованием асинхронного веб-фреймворка Litestar, работы с реляционными базами данных PostgreSQL и объектным хранилищем MinIO, интеграции внешних API (Telegram Bot API, IMAP/SMTP), а также контейнеризации и развёртывания приложений с использованием Docker.
+
+Настоящий отчёт содержит описание выполненных в ходе практики работ, принятых архитектурных решений, процесса реализации основных компонентов системы и полученных результатов. Отчёт состоит из введения, трёх глав, заключения и списка литературы. В главе 1 рассмотрены теоретические основы омниканальных решений. В главе 2 описана архитектура разработанного программного комплекса. Глава 3 содержит детали реализации ключевых компонентов системы.
+
+\newpage
+
+\chapter{Теоретические основы омниканальных решений}
+
+\section{Понятие омниканальности}
+
+В современном мире цифровых технологий и повсеместного распространения интернета взаимодействие компаний с клиентами претерпело кардинальные изменения. Традиционные модели коммуникации, основанные на использовании одного или нескольких изолированных каналов, уступают место более сложным и интегрированным подходам. Одним из таких подходов является омниканальная стратегия, которая предполагает бесшовную интеграцию всех каналов взаимодействия с клиентом в единую экосистему.
+
+Омниканальность (от лат. \textit{omni}~---~«все» и \textit{channel}~---~«канал») представляет собой стратегический подход к организации взаимодействия с клиентами, при котором все каналы коммуникации (веб-сайт, мобильное приложение, социальные сети, электронная почта, телефон, физические точки продаж и др.) объединены в единую систему. Ключевой особенностью омниканального подхода является то, что клиент воспринимается как единое целое независимо от того, через какой канал он взаимодействует с компанией, а все каналы обмениваются данными в режиме реального времени.
+
+Важно различать понятия мультиканальности и омниканальности. Мультиканальный подход предполагает использование нескольких каналов коммуникации, однако эти каналы часто существуют изолированно друг от друга. Например, клиент может оформить заказ на веб-сайте, но при обращении в контакт-центр ему придётся заново сообщать всю информацию. В омниканальной модели такая ситуация исключена: история взаимодействия клиента доступна во всех каналах одновременно, что обеспечивает непрерывность клиентского опыта.
+
+\section{Эволюция каналов взаимодействия с клиентами}
+
+Развитие каналов взаимодействия с клиентами прошло несколько этапов. На начальном этапе компании использовали исключительно офлайн-каналы: личные встречи, телефонные звонки, почтовые рассылки. С развитием интернета появились онлайн-каналы: веб-сайты, электронная почта, чаты. Вслед за этим возникла необходимость интеграции различных каналов, что привело к появлению мультиканального подхода.
+
+\begin{table}[ht]
+\centering
+\caption{Эволюция подходов к взаимодействию с клиентами}
+\label{tab:evolution}
+\begin{tabularx}{\textwidth}{|X|X|X|}
+\hline
+\textbf{Характеристика} & \textbf{Мультиканальный подход} & \textbf{Омниканальный подход} \\ \hline
+Интеграция каналов & Частичная или отсутствует & Полная интеграция \\ \hline
+Единая история клиента & Отсутствует & Едина для всех каналов \\ \hline
+Качество обслуживания & Различается по каналам & Единое на всех каналах \\ \hline
+Аналитика & Разрозненная & Консолидированная \\ \hline
+\end{tabularx}
+\end{table}
+
+Современный этап развития характеризуется переходом к омниканальности, что обусловлено несколькими факторами. Во-первых, изменилось поведение потребителей: современный клиент использует в среднем 4--6 различных каналов при взаимодействии с компанией. Во-вторых, развитие технологий позволило обеспечить техническую возможность интеграции разнородных систем. В-третьих, конкурентная среда вынуждает компании искать новые способы привлечения и удержания клиентов.
+
+\section{Ключевые компоненты омниканальной архитектуры}
+
+Омниканальная архитектура включает в себя несколько взаимосвязанных компонентов:
+
+\begin{enumerate}
+    \item \textbf{Единая платформа управления взаимодействием}~---~центральный элемент архитектуры, обеспечивающий сбор, хранение и обработку данных о взаимодействиях с клиентами из всех каналов.
+
+    \item \textbf{Интеграционный слой}~---~совокупность программных интерфейсов (API) и middleware-решений, обеспечивающих обмен данными между различными системами.
+
+    \item \textbf{Система управления контентом}~---~обеспечивает единообразное представление информации на всех каналах.
+
+    \item \textbf{Аналитическая платформа}~---~собирает и анализирует данные о поведении клиентов, позволяя принимать обоснованные решения.
+
+    \item \textbf{Система управления взаимоотношениями с клиентами (CRM)}~---~хранит полную историю взаимодействия с каждым клиентом.
+\end{enumerate}
+
+Особое значение в омниканальной архитектуре имеет качество данных. Поскольку информация поступает из множества источников, критически важным является обеспечение её непротиворечивости и актуальности.
+
+\section{Преимущества внедрения омниканальных решений}
+
+Внедрение омниканального подхода предоставляет компаниям ряд существенных преимуществ:
+
+\begin{itemize}
+    \item \textbf{Повышение лояльности клиентов.} Бесшовный клиентский опыт способствует росту удовлетворённости и, как следствие, увеличению показателя удержания клиентов (retention rate).
+
+    \item \textbf{Увеличение средней выручки на клиента.} Интеграция каналов открывает возможности для кросс-канальных продаж и персонализированных предложений.
+
+    \item \textbf{Оптимизация операционных затрат.} Автоматизация процессов и единая аналитика позволяют сократить издержки на обслуживание клиентов.
+
+    \item \textbf{Повышение эффективности маркетинга.} Консолидированные данные о клиентах обеспечивают более точное таргетирование и персонализацию коммуникаций.
+\end{itemize}
+
+Исследования показывают, что компании, успешно внедрившие омниканальную стратегию, демонстрируют на 10--15\% более высокие показатели удовлетворённости клиентов и на 20--30\% больший рост выручки по сравнению с компаниями, использующими мультиканальный подход.
+
+\section{Технологические аспекты реализации}
+
+Реализация омниканального подхода требует использования современных технологических решений. Ключевую роль играют облачные технологии, обеспечивающие масштабируемость и доступность систем. Микросервисная архитектура позволяет гибко наращивать функциональность и интегрировать новые каналы.
+
+В области управления данными широкое применение находят технологии Big Data и системы класса Customer Data Platform (CDP), которые обеспечивают сбор и унификацию данных из различных источников. Машинное обучение используется для персонализации взаимодействий и прогнозирования поведения клиентов.
+
+Безопасность данных является критически важным аспектом, особенно в контексте требований законодательства о защите персональных данных. Омниканальные решения должны обеспечивать соответствие требованиям Федерального закона №~152-ФЗ «О персональных данных» и других нормативных актов.
+
+\section{Отраслевые особенности применения}
+
+Омниканальные решения находят применение в различных отраслях экономики. В розничной торговле они позволяют объединить онлайн- и офлайн-каналы продаж, обеспечивая такие сценарии, как «клик-энд-коллект» (заказ онлайн с самовывозом в магазине) и возврат товаров, приобретённых онлайн, в физических точках продаж.
+
+В банковском секторе омниканальность проявляется в интеграции мобильного банкинга, интернет-банка, отделений и контакт-центра. Клиент может начать оформление продукта в мобильном приложении и завершить его в отделении без повторного ввода данных.
+
+В сфере телекоммуникаций омниканальный подход обеспечивает единое обслуживание клиентов через личный кабинет, мобильное приложение, чаты поддержки и центры продаж.
+
+\section*{Выводы по главе 1}
+
+Омниканальные решения представляют собой современный подход к организации взаимодействия с клиентами, обеспечивающий бесшовную интеграцию всех каналов коммуникации. Внедрение такого подхода требует значительных инвестиций в технологии и организационные изменения, однако обеспечивает существенные конкурентные преимущества за счёт повышения качества клиентского опыта и эффективности бизнес-процессов.
+
+\newpage
+\chapter{Архитектура программного комплекса омниканального решения}
+
+\section{Общая архитектура системы}
+
+Разработанный программный комплекс представляет собой омниканальную платформу для взаимодействия с клиентами, объединяющую несколько каналов связи в едином интерфейсе. Система построена по принципу \textbf{Clean Architecture} (чистая архитектура) с монолитным развёртыванием и состоит из трёх основных уровней: клиентское приложение (фронтенд), серверное приложение (бэкенд) и внешние сервисы.
+
+Общая структурная схема системы представлена ниже:
+
+\medskip
+\begin{center}
+\footnotesize
+\begin{tabular}{c}
+\fbox{\parbox{0.3\textwidth}{\centering\vspace{2pt}Клиентское приложение\\(\textbf{Frontend})\vspace{2pt}}} \\
+$\uparrow$ HTTP/WS \\
+\fbox{\parbox{0.5\textwidth}{\centering\vspace{2pt}\textbf{Серверное приложение (Backend)}\\\vspace{2pt}}} \\
+$\downarrow$ $\downarrow$ $\downarrow$ \\
+\fbox{\parbox{0.2\textwidth}{\centering\vspace{2pt}\small PostgreSQL\vspace{2pt}}}
+\hspace{1em}
+\fbox{\parbox{0.2\textwidth}{\centering\vspace{2pt}\small MinIO (S3)\vspace{2pt}}}
+\hspace{1em}
+\fbox{\parbox{0.22\textwidth}{\centering\vspace{2pt}\small Telegram Bot API\vspace{2pt}}}
+\hspace{1em}
+\fbox{\parbox{0.18\textwidth}{\centering\vspace{2pt}\small IMAP/SMTP\vspace{2pt}}}
+\end{tabular}
+\end{center}
+\medskip
+
+Основные компоненты системы развёртываются в среде контейнеризации Docker, что обеспечивает изолированность окружений и простоту масштабирования. Конфигурация взаимодействия компонентов задаётся через переменные окружения.
+
+\section{Серверная часть (Backend)}
+
+\subsection{Архитектурный подход}
+
+Серверная часть реализована на языке \textbf{Python 3.14+} с использованием асинхронного веб-фреймворка \textbf{Litestar 2.x}. В основе архитектуры лежит принцип разделения ответственности (Clean Architecture), который предполагает чёткое разделение кода на три слоя:
+
+\begin{itemize}
+    \item \textbf{Core (ядро)}~---~содержит доменные модели, бизнес-логику и порты (интерфейсы) для взаимодействия с внешними системами.
+    \item \textbf{API}~---~предоставляет REST-эндпоинты и WebSocket для взаимодействия с клиентским приложением.
+    \item \textbf{Adapters (адаптеры)}~---~реализуют порты ядра для конкретных технологий (PostgreSQL, Telegram, Email, MinIO).
+\end{itemize}
+
+Такая архитектура обеспечивает слабую связанность компонентов и возможность замены любой реализации без изменения бизнес-логики.
+
+\subsection{Схема слоёв бэкенда}
+
+\begin{center}
+\footnotesize
+\begin{tabular}{c}
+\fbox{\parbox{0.55\textwidth}{\centering\vspace{2pt}\textbf{API Layer} --- REST-контроллеры, схемы DTO, обработка исключений\vspace{2pt}}} \\
+$\uparrow$ \\
+\fbox{\parbox{0.55\textwidth}{\centering\vspace{2pt}\textbf{Core Layer} --- Доменные модели, сервисы (бизнес-логика), порты\vspace{2pt}}} \\
+$\uparrow$ \\
+\fbox{\parbox{0.55\textwidth}{\centering\vspace{2pt}\textbf{Adapters Layer} --- Реализации: БД, Telegram, Email, S3, файловое хранилище\vspace{2pt}}}
+\end{tabular}
+\end{center}
+
+\subsection{Технологический стек бэкенда}
+
+\begin{itemize}
+    \item \textbf{Веб-фреймворк}: Litestar 2.x (асинхронный, поддержка OpenAPI, WebSocket)
+    \item \textbf{ORM}: SQLAlchemy 2.x (асинхронный режим)
+    \item \textbf{База данных}: PostgreSQL 17 (через asyncpg)
+    \item \textbf{DI-контейнер}: punq (внедрение зависимостей)
+    \item \textbf{Аутентификация}: JWT (HS256) + bcrypt
+    \item \textbf{Файловое хранилище}: MinIO (S3-совместимое объектное хранилище)
+    \item \textbf{Telegram}: python-telegram-bot 22.x (long-polling)
+    \item \textbf{Email}: IMAP (входящие), SMTP (исходящие)
+\end{itemize}
+
+\subsection{API-эндпоинты}
+
+Серверная часть предоставляет следующие группы эндпоинтов:
+
+\begin{itemize}
+    \item \textbf{Сообщения}: получение списка, просмотр, отправка ответа, загрузка файлов
+    \item \textbf{Клиенты}: создание, просмотр, редактирование, поиск по каналу
+    \item \textbf{Кураторы}: управление учётными записями операторов поддержки
+    \item \textbf{Назначения}: привязка куратора к сообщению, передача между кураторами, история
+    \item \textbf{Аутентификация}: регистрация, вход, получение текущего пользователя
+    \item \textbf{WebSocket}: уведомления о новых сообщениях и переназначениях в реальном времени
+\end{itemize}
+
+Все REST-ответы возвращаются в формате JSON. При возникновении ошибок используется формат Problem Details (RFC~9457).
+
+\section{Клиентская часть (Frontend)}
+
+Клиентское приложение представляет собой одностраничное приложение (SPA), реализованное с использованием современного стека веб-технологий:
+
+\begin{itemize}
+    \item \textbf{Фреймворк}: React 19
+    \item \textbf{Язык}: TypeScript 5.8 (строгая типизация)
+    \item \textbf{Сборщик}: Vite 6
+    \item \textbf{Стилизация}: Tailwind CSS 3 (адаптивный дизайн, поддержка тёмной темы)
+\end{itemize}
+
+\subsection{Структура пользовательского интерфейса}
+
+Интерфейс состоит из двух основных панелей:
+
+\begin{itemize}
+    \item \textbf{Левая панель} (320\,px): отображает список контактов с возможностью поиска, сортировки и фильтрации по каналу связи. Для каждого контакта отображается аватар, имя, последнее сообщение и количество непрочитанных сообщений.
+    \item \textbf{Правая панель}: содержит область просмотра сообщений (история диалога) и форму ввода ответа. Форма ввода адаптируется под тип канала: для чатов~---~поле ввода с прикреплением файлов, для email~---~отдельная форма с полями «Кому», «Тема» и «Тело письма».
+\end{itemize}
+
+\subsection{Взаимодействие с сервером}
+
+Обмен данными между клиентом и сервером осуществляется по протоколу HTTP (REST API) для основных операций и через WebSocket для получения уведомлений в реальном времени. При загрузке страницы устанавливается WebSocket-соединение с автоматическим переподключением при разрыве (с задержкой 3~секунды).
+
+Аутентификация выполняется по JWT-токену, который сохраняется в \texttt{localStorage} браузера и передаётся в заголовке \texttt{Authorization: Bearer <token>} при каждом запросе.
+
+\section{Схема базы данных}
+
+Система использует реляционную базу данных PostgreSQL 17, содержащую следующие основные таблицы:
+
+\begin{itemize}
+    \item \textbf{messages}~---~хранит все сообщения из всех каналов. Ключевые поля: идентификатор (формат \texttt{канал:оригинальный\_id}), тип канала, идентификатор отправителя, содержимое, тип сообщения (текст, фото, документ и т.д.), идентификатор родительского сообщения (для тредов), назначенный куратор, временная метка.
+    \item \textbf{senders}~---~отправители сообщений (физические или юридические лица). Содержит имя и связанные идентичности.
+    \item \textbf{sender\_identities}~---~привязка отправителя к конкретному каналу (например, Telegram ID или email-адрес).
+    \item \textbf{clients}~---~клиенты, с которыми ведётся диалог. Содержит имя, телефон, email, ссылку на аватар, метаданные.
+    \item \textbf{client\_channels}~---~привязка клиента к каналам связи (канал + внешний идентификатор + имя пользователя).
+    \item \textbf{curators}~---~операторы поддержки (кураторы). Содержит ФИО, логин, email, роль, статус, хеш пароля.
+    \item \textbf{assignment\_history}~---~история назначения кураторов на сообщения (кто, от кого, кому, причина, временная метка).
+\end{itemize}
+
+\begin{center}
+\begin{table}[ht]
+\centering
+\caption{Сводная таблица базы данных}
+\label{tab:db_schema}
+\begin{tabularx}{\textwidth}{|X|c|X|}
+\hline
+\textbf{Таблица} & \textbf{Кол-во полей} & \textbf{Назначение} \\ \hline
+messages & 11 & Все сообщения из всех каналов \\ \hline
+senders & 3 & Отправители сообщений \\ \hline
+sender\_identities & 4 & Привязка отправителей к каналам \\ \hline
+clients & 7 & Клиенты системы \\ \hline
+client\_channels & 5 & Каналы клиентов \\ \hline
+curators & 9 & Операторы поддержки \\ \hline
+assignment\_history & 7 & История назначений \\ \hline
+\end{tabularx}
+\end{table}
+\end{center}
+
+\section{Модуль интеграции каналов связи}
+
+Ключевым компонентом системы является модуль интеграции каналов, реализованный с использованием паттерна \textbf{Абстрактная фабрика} (Abstract Factory). Каждый канал представлен отдельным классом-движком (Engine), реализующим единый интерфейс для получения и отправки сообщений.
+
+\begin{center}
+\footnotesize
+\begin{tabular}{c}
+\fbox{\parbox{0.55\textwidth}{\centering\vspace{2pt}\textbf{BaseEngine} (интерфейс)\\\small get\_incoming(), send\_message()\vspace{2pt}}} \\
+$\swarrow$ \hspace{2em} $\downarrow$ \hspace{2em} $\searrow$ \\
+\fbox{\parbox{0.17\textwidth}{\centering\vspace{2pt}\small\textbf{Telegram}\\Engine\vspace{2pt}}}
+\hspace{1em}
+\fbox{\parbox{0.17\textwidth}{\centering\vspace{2pt}\small\textbf{Email}\\Engine\vspace{2pt}}}
+\hspace{1em}
+\fbox{\parbox{0.17\textwidth}{\centering\vspace{2pt}\small\textbf{SMS/VK}\\Engine (план)\vspace{2pt}}}
+\end{tabular}
+\end{center}
+
+\subsection{Модуль Telegram}
+
+Интеграция с мессенджером Telegram реализована через официальное API с использованием библиотеки \texttt{python-telegram-bot}. Модуль работает в режиме long-polling, периодически опрашивая сервер Telegram на наличие новых сообщений. Поддерживаются следующие типы контента:
+
+\begin{itemize}
+    \item Текстовые сообщения
+    \item Фотографии (загружаются в MinIO, фронтенду передаётся presigned-ссылка)
+    \item Документы (аналогичная обработка)
+    \item Стикеры (поддерживаются форматы .webp, .webm, .tgs)
+    \item Анимации (GIF)
+    \item Видео, аудио и голосовые сообщения
+\end{itemize}
+
+При поступлении нового сообщения модуль автоматически создаёт или обновляет запись клиента в базе данных, сохраняет сообщение и уведомляет подключённых операторов через WebSocket.
+
+\subsection{Модуль Email}
+
+Интеграция с электронной почтой реализована по протоколам IMAP (для получения входящих сообщений) и SMTP (для отправки ответов). Поддерживаются как текстовые, так и HTML-письма. На фронтенде HTML-часть письма отображается в iframe-контейнере.
+
+Цикл обработки email-сообщений:
+\begin{enumerate}
+    \item Периодический опрос IMAP-сервера на предмет новых непрочитанных писем.
+    \item Извлечение текстового и HTML-содержимого, декодирование темы и заголовков.
+    \item Сохранение в базе данных в формате, едином для всех каналов.
+    \item Отправка ответа через SMTP с сохранением темы письма (префикс <<Re:>>).
+\end{enumerate}
+
+\subsection{Планируемые каналы}
+
+Архитектура системы предусматривает возможность подключения дополнительных каналов без изменения существующего кода. В настоящий момент в кодовой базе предусмотрена поддержка (включена в перечисление типов каналов, но не реализована):
+
+\begin{itemize}
+    \item \textbf{SMS}~---~планируется через интеграцию с SMS-шлюзом
+    \item \textbf{VK}~---~планируется через VK API
+\end{itemize}
+
+Подключение нового канала сводится к реализации класса-движка, наследующего интерфейс BaseEngine, и регистрации его фабрики в общем реестре.
+
+\section{Взаимодействие компонентов}
+
+\subsection{Получение входящего сообщения}
+
+Процесс получения и обработки входящего сообщения включает следующие шаги:
+
+\begin{enumerate}
+    \item \textbf{Пинг канала}: компонент PollingOrchestrator запускает асинхронную задачу для каждого активного движка канала.
+    \item \textbf{Получение}: движок канала (Telegram, Email) получает новое сообщение от внешнего API.
+    \item \textbf{Создание/обновление клиента}: система проверяет, существует ли клиент с указанным внешним идентификатором. Если нет~---~создаётся новый клиент.
+    \item \textbf{Сохранение}: сообщение сохраняется в таблицу \texttt{messages} через репозиторий.
+    \item \textbf{Уведомление}: через WebSocket всем подключённым операторам отправляется событие \texttt{new\_message}.
+    \item \textbf{Отображение}: фронтенд получает событие и добавляет сообщение в интерфейс соответствующего оператора.
+\end{enumerate}
+
+\subsection{Отправка ответа}
+
+\begin{enumerate}
+    \item Оператор вводит текст ответа в интерфейсе и нажимает <<Отправить>>.
+    \item Фронтенд отправляет POST-запрос на \texttt{/api/messages/reply}.
+    \item Бэкенд создаёт объект сообщения-ответа со ссылкой на родительское сообщение (\texttt{parent\_id}).
+    \item Движок соответствующего канала отправляет сообщение через внешнее API (Telegram~---~в чат, Email~---~на почтовый адрес).
+    \item Ответ сохраняется в базу данных и транслируется через WebSocket.
+\end{enumerate}
+
+\subsection{Назначение куратора}
+
+\begin{enumerate}
+    \item Оператор выбирает сообщение и назначает ответственного куратора (себя или другого оператора).
+    \item Фронтенд отправляет запрос на \texttt{POST /api/messages/\{id\}/assign}.
+    \item Бэкенд обновляет поле \texttt{curator\_id} в записи сообщения и создаёт запись в \texttt{assignment\_history}.
+    \item Система уведомляет всех операторов через WebSocket о назначении.
+\end{enumerate}
+
+\newpage
+\section*{Выводы по главе 2}
+
+Разработанный программный комплекс реализует архитектуру, обеспечивающую надёжную и масштабируемую работу омниканальной платформы. Использование Clean Architecture позволяет изолировать бизнес-логику от технических деталей реализации, что упрощает поддержку и развитие системы. Модульная архитектура интеграции каналов обеспечивает возможность подключения новых каналов связи с минимальными трудозатратами. Применение современных технологий (Python 3.14, Litestar, React 19, PostgreSQL 17, WebSocket) гарантирует высокую производительность и отзывчивость интерфейса.
+
+\newpage
+\chapter{Реализация программного комплекса}
+
+В данной главе рассматриваются ключевые аспекты реализации системы, включая доменную модель, бизнес-логику, адаптеры каналов связи, репозитории для работы с базой данных, а также конфигурацию и развёртывание.
+
+\section{Доменная модель}
+
+Центральным элементом предметной области является класс \texttt{Message}, представляющий сообщение из любого канала связи. Модель реализована в виде неизменяемого dataclass-а с использованием \texttt{slots=True} для оптимизации потребления памяти:
+
+\begin{lstlisting}[language=Python]
+@dataclass(slots=True)
+class Message:
+    id: str
+    channel: str
+    sender_id: str
+    content: str
+    timestamp: datetime
+    metadata: Dict[str, Any]
+    message_type: MessageType = MessageType.TEXT
+    recipient: Optional[str] = None
+    subject: Optional[str] = None
+    parent_id: Optional[str] = None
+    curator_id: Optional[str] = None
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "id": self.id,
+            "channel": self.channel,
+            "sender_id": self.sender_id,
+            "content": self.content,
+            "timestamp": self.timestamp.isoformat(),
+            "message_type": self.message_type.value,
+            "metadata": self.metadata,
+            "recipient": self.recipient,
+            "subject": self.subject,
+            "parent_id": self.parent_id,
+            "curator_id": self.curator_id,
+        }
+\end{lstlisting}
+
+Поле \texttt{channel} принимает одно из значений перечисления \texttt{ChannelType}, которое определяет поддерживаемые каналы связи:
+
+\begin{lstlisting}[language=Python]
+class ChannelType(StrEnum):
+    TELEGRAM = "telegram"
+    EMAIL = "email"
+    SMS = "sms"
+    VK = "vk"
+\end{lstlisting}
+
+Тип вложенного контента (текст, фото, документ, стикер и т.д.) определяется перечислением \texttt{MessageType}. Такой подход обеспечивает единообразное представление разнородных сообщений из всех каналов, что является ключевым требованием омниканальной системы.
+
+\section{Порты (интерфейсы)}
+
+Для обеспечения слабой связанности компонентов каждый модуль зависит от абстракции (порта), а не от конкретной реализации. Интерфейс движка канала связи определён следующим образом:
+
+\begin{lstlisting}[language=Python]
+class MessageEngine(ABC):
+    @abstractmethod
+    async def start(self) -> None:
+        ...
+
+    @abstractmethod
+    async def send_message(
+        self, recipient: str, content: str, **kwargs
+    ) -> str:
+        ...
+
+    @abstractmethod
+    def get_incoming(self) -> AsyncIterator[Message]:
+        ...
+
+    @property
+    @abstractmethod
+    def channel_type(self) -> str:
+        ...
+\end{lstlisting}
+
+Метод \texttt{get\_incoming()} возвращает асинхронный итератор, что позволяет эффективно обрабатывать поток входящих сообщений без блокировки основного потока выполнения. Метод \texttt{send\_message()} возвращает идентификатор отправленного сообщения для последующей синхронизации состояния.
+
+Аналогичным образом определены порты для репозиториев сообщений, клиентов, кураторов и шлюза базы данных.
+
+\section{Бизнес-логика}
+
+\subsection{Сервис сообщений}
+
+\texttt{MessageService} реализует сценарии использования, связанные с управлением сообщениями. Основные операции делегируются репозиторию через интерфейс \texttt{MessageRepository}:
+
+\begin{lstlisting}[language=Python]
+class MessageService:
+    def __init__(self, repository: MessageRepository):
+        self._repository = repository
+
+    async def save_message(self, message: Message) -> None:
+        await self._repository.save_message(message)
+
+    async def get_messages(
+        self,
+        channel: Optional[str] = None,
+        sender_id: Optional[str] = None,
+        curator_id: Optional[str] = None,
+        limit: int = 100,
+        offset: int = 0,
+    ) -> List[Message]:
+        return await self._repository.get_messages(
+            channel=channel, sender_id=sender_id,
+            curator_id=curator_id, limit=limit, offset=offset,
+        )
+
+    async def reply_to_message(
+        self, message_id: str, content: str
+    ) -> Message:
+        original = await self._repository.get_message_by_id(message_id)
+        if not original:
+            raise MessageNotFoundError(message_id)
+        return original
+\end{lstlisting}
+
+Метод \texttt{reply\_to\_message()} проверяет существование исходного сообщения и в случае его отсутствия генерирует исключение \texttt{MessageNotFoundError}, которое в дальнейшем преобразуется в HTTP-ответ с кодом 404 в формате Problem Details (RFC~9457).
+
+\subsection{Оркестратор опроса каналов}
+
+\texttt{PollingOrchestrator} отвечает за непрерывный сбор входящих сообщений из всех зарегистрированных каналов. Класс реализует паттерн <<Наблюдатель>> (Observer) и использует асинхронные задачи для параллельного опроса движков:
+
+\begin{lstlisting}[language=Python]
+class PollingOrchestrator(AbstractPollingService):
+    def __init__(self, message_service, client_service):
+        self._message_service = message_service
+        self._client_service = client_service
+        self._engines: List[MessageEngine] = []
+        self._tasks: List[asyncio.Task] = []
+
+    def register_engine(self, engine: MessageEngine) -> None:
+        self._engines.append(engine)
+
+    async def start_polling(self) -> None:
+        self._running = True
+        for engine in self._engines:
+            await engine.start()
+            task = asyncio.create_task(
+                self._poll_engine(engine)
+            )
+            self._tasks.append(task)
+
+    async def send_reply(self, channel, recipient,
+                         content, **kwargs) -> str | None:
+        for engine in self._engines:
+            if engine.channel_type == channel:
+                return await engine.send_message(
+                    recipient=recipient, content=content, **kwargs
+                )
+        return None
+\end{lstlisting}
+
+Основной цикл обработки реализован в методе \texttt{\_poll\_engine()}. Для каждого полученного сообщения система автоматически выполняет следующие действия:
+
+\begin{enumerate}
+    \item Извлечение информации об отправителе из метаданных канала.
+    \item Создание или обновление записи клиента через \texttt{ClientService}.
+    \item Сохранение сообщения в базу данных.
+    \item Трансляция события \texttt{new\_message} всем подключённым операторам через WebSocket.
+\end{enumerate}
+
+Извлечение информации об отправителе учитывает особенности каждого канала: для Telegram извлекаются \texttt{username} и \texttt{first\_name}, для email~---~имя и адрес из заголовка <<From>>.
+
+\section{Адаптеры каналов связи}
+
+\subsection{Telegram}
+
+Адаптер Telegram реализован с использованием библиотеки \texttt{python-telegram-bot}. Класс \texttt{TelegramEngine} обрабатывает различные типы вложений, загружая медиафайлы в объектное хранилище MinIO и формируя presigned-ссылки для доступа со стороны фронтенда.
+
+Метод отправки сообщения поддерживает как текстовые сообщения, так и сообщения с вложениями:
+
+\begin{lstlisting}[language=Python]
+async def send_message(
+    self, recipient: str, content: str, **kwargs
+) -> str:
+    if "file_url" in kwargs:
+        with aiohttp.ClientSession() as session:
+            async with session.get(kwargs["file_url"]) as resp:
+                file_data = await resp.read()
+        file = InputFile(BytesIO(file_data),
+                         filename=kwargs.get("filename", "file"))
+        sent = await self._bot.send_document(
+            chat_id=recipient, document=file,
+            caption=content or None
+        )
+    else:
+        sent = await self._bot.send_message(
+            chat_id=recipient, text=content
+        )
+    return str(sent.id)
+\end{lstlisting}
+
+Для загрузки вложений в S3-хранилище реализованы вспомогательные методы:
+
+\begin{lstlisting}[language=Python]
+async def _upload_photo_to_s3(
+    self, photo: PhotoSize, message_id: str
+) -> Optional[str]:
+    file = await photo.get_file()
+    file_bytes = BytesIO()
+    await file.download_to_memory(file_bytes)
+    file_bytes.seek(0)
+    url = await self._s3.upload_file(
+        bucket="attachments",
+        key=f"{message_id}/photo.jpg",
+        data=file_bytes.getvalue(),
+    )
+    return url
+\end{lstlisting}
+
+\subsection{Email}
+
+Адаптер электронной почты использует встроенные библиотеки Python \texttt{imaplib} (получение) и \texttt{smtplib} (отправка), работая через \texttt{asyncio.run\_in\_executor()} для совместимости с асинхронной архитектурой. Цикл опроса IMAP-сервера:
+
+\begin{lstlisting}[language=Python]
+async def get_incoming(self) -> AsyncIterator[Message]:
+    while self._running:
+        messages = await asyncio.get_event_loop().run_in_executor(
+            None, self._fetch_new_messages
+        )
+        for msg in messages:
+            yield msg
+        await asyncio.sleep(self._poll_interval)
+\end{lstlisting}
+
+Извлечение содержимого письма обрабатывает MIME-структуру, поддерживая как текстовые, так и HTML-части:
+
+\begin{lstlisting}[language=Python]
+def _extract_body(self, msg) -> tuple[str, str | None]:
+    text_body = ""
+    html_body = None
+    if msg.is_multipart():
+        for part in msg.walk():
+            content_type = part.get_content_type()
+            if content_type == "text/plain":
+                text_body += self._decode_part(part)
+            elif content_type == "text/html":
+                html_body = self._decode_part(part)
+    else:
+        text_body = self._decode_part(msg)
+    return text_body, html_body
+\end{lstlisting}
+
+\subsection{Фабрика движков}
+
+Для создания экземпляров движков используется паттерн <<Абстрактная фабрика>>. Каждый тип канала имеет свою фабрику, которая регистрируется в общем реестре:
+
+\begin{lstlisting}[language=Python]
+class TelegramEngineFactory(EngineFactory):
+    def create_engine(self, config: dict) -> MessageEngine:
+        return TelegramEngine(token=config["token"], s3=self._s3)
+
+    def get_supported_channel(self) -> str:
+        return ChannelType.TELEGRAM
+
+
+class EngineAbstractFactory:
+    def __init__(self):
+        self._factories: Dict[str, EngineFactory] = {}
+
+    def register_factory(self, factory: EngineFactory) -> None:
+        channel = factory.get_supported_channel()
+        self._factories[channel] = factory
+
+    def create_engine(self, channel_type, config) -> MessageEngine:
+        if channel_type not in self._factories:
+            raise ValueError(
+                f"No factory for channel: {channel_type}"
+            )
+        return self._factories[channel_type].create_engine(config)
+\end{lstlisting}
+
+Такой подход позволяет добавлять новые каналы связи простой реализацией нового движка и его фабрики, без модификации существующего кода.
+
+\section{Репозиторий и ORM}
+
+Для работы с базой данных используется SQLAlchemy 2.x в асинхронном режиме. Модель сообщения в ORM представляет собой отображение на таблицу \texttt{messages}:
+
+\begin{lstlisting}[language=Python]
+class MessageModel(Base):
+    __tablename__ = "messages"
+
+    id = Column(String, primary_key=True)
+    channel = Column(String(50), nullable=False, index=True)
+    sender_id = Column(String, ForeignKey("senders.id",
+                                          ondelete="SET NULL"),
+                       nullable=True, index=True)
+    content = Column(Text, nullable=False)
+    message_type = Column(String(20), nullable=False,
+                          server_default="text")
+    subject = Column(String(500), nullable=True)
+    parent_id = Column(String, nullable=True, index=True)
+    curator_id = Column(String, nullable=True, index=True)
+    timestamp = Column(DateTime(timezone=True), nullable=False)
+    metadata_ = Column("metadata", JSON, nullable=True)
+    created_at = Column(DateTime(timezone=True),
+                        server_default=func.now())
+\end{lstlisting}
+
+Репозиторий реализует интерфейс \texttt{MessageRepository}, инкапсулируя детали выполнения SQL-запросов. Методы репозитория работают с доменными объектами, а не с ORM-моделями, что обеспечивает независимость бизнес-логики от выбранной СУБД.
+
+\section{Контейнер внедрения зависимостей}
+
+Для связывания компонентов используется DI-контейнер \texttt{punq}. Все зависимости регистрируются в единственной точке конфигурации:
+
+\begin{lstlisting}[language=Python]
+def configure_container() -> punq.Container:
+    container = punq.Container()
+
+    container.register(EngineAbstractFactory,
+                       instance=EngineAbstractFactory())
+    container.register(S3Interface, instance=MinioGateway(...))
+    container.register(DatabaseGateway,
+                       instance=PostgresDatabaseGateway(...))
+    container.register(MessageRepository,
+                       instance=PostgresMessageRepository(...))
+    container.register(MessageService)
+    container.register(ClientService)
+    container.register(AbstractPollingService,
+                       instance=PollingOrchestrator(...))
+    container.register(AuthService)
+    container.register(ValidationService)
+
+    return container
+\end{lstlisting}
+
+Контейнер обеспечивает автоматическое разрешение зависимостей: если сервис требует \texttt{MessageRepository}, контейнер внедряет соответствующий экземпляр без необходимости ручного конструирования.
+
+Точка входа в приложение~---~функция создания приложения Litestar:
+
+\begin{lstlisting}[language=Python]
+@asynccontextmanager
+async def lifespan(app: Litestar):
+    container = configure_container()
+    db = container.resolve(DatabaseGateway)
+    await db.init()
+    polling = container.resolve(AbstractPollingService)
+    await polling.start_polling()
+    yield
+    await polling.stop_polling()
+    await db.close()
+
+
+app = Litestar(
+    route_handlers=[...],
+    lifespan=[lifespan],
+    websocket_handler=websocket_handler,
+    on_app_init=[...],
+)
+\end{lstlisting}
+
+\section{Конфигурация и развёртывание}
+
+Система развёртывается с использованием Docker Compose, что обеспечивает изолированное окружение для всех компонентов:
+
+\begin{lstlisting}[language={},frame=single,backgroundcolor=\color{gray!7},numbers=none]
+services:
+  postgres:
+    image: postgres:17
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: omnichannel
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U user -d omnichannel"]
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  minio:
+    image: minio/minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    volumes:
+      - minio_data:/data
+
+  app:
+    build: .
+    env_file: .env
+    ports:
+      - "8044:8044"
+    depends_on:
+      postgres: { condition: service_healthy }
+\end{lstlisting}
+
+Конфигурация приложения задаётся через переменные окружения (файл \texttt{.env}), что позволяет гибко настраивать параметры подключения к базам данных, токены каналов и настройки безопасности без изменения кода.
+
+\section{Тестирование}
+
+Покрытие кода модульными и интеграционными тестами реализовано с использованием \texttt{pytest} совместно с \texttt{pytest-asyncio} для асинхронных тестов. Пример теста сервиса опроса каналов:
+
+\begin{lstlisting}[language=Python]
+async def test_poll_engine_saves_messages(
+    mock_engine, mock_message_service, mock_client_service
+):
+    orchestrator = PollingOrchestrator(
+        message_service=mock_message_service,
+        client_service=mock_client_service,
+    )
+    orchestrator.register_engine(mock_engine)
+
+    mock_engine.set_messages([...])
+    await orchestrator._poll_engine(mock_engine)
+
+    assert mock_message_service.save_message.called
+\end{lstlisting}
+
+Тесты репозиториев используют Docker-контейнер с PostgreSQL (через \texttt{pytest-postgresql} или тестовую БД), что гарантирует корректность SQL-запросов и целостность данных. На момент написания отчёта тестовое покрытие включает тестирование всех сервисов, адаптеров, API-маршрутов и обработчиков исключений.
+
+\newpage
+\section*{Выводы по главе 3}
+
+В ходе реализации программного комплекса были применены современные подходы к разработке: Clean Architecture для разделения ответственности, паттерны Abstract Factory и Observer для гибкой интеграции каналов, асинхронное программирование для обеспечения производительности, а также Dependency Injection для связывания компонентов. Применение Docker Compose упрощает развёртывание и обеспечивает воспроизводимость окружения. Тестовое покрытие подтверждает корректность реализации ключевых сценариев использования системы.
+
+На основе проведённой работы можно сделать вывод, что разработанная архитектура соответствует всем требованиям, предъявляемым к современным омниканальным решениям: модульность, масштабируемость, расширяемость и надёжность.
+
+\newpage
+\chapter*{Заключение}
+\addcontentsline{toc}{chapter}{Заключение}
+
+В ходе прохождения производственной практики я успешно выполнил работы по проектированию и разработке омниканальной платформы для центра обучения, обеспечивающей приём и обработку обращений из различных каналов связи в едином интерфейсе куратора.
+
+Была спроектирована архитектура системы, основанная на принципах Clean Architecture. Определены три уровня: Core (доменные модели и бизнес-логика), API (REST-эндпоинты и WebSocket) и Adapters (реализации PostgreSQL, Telegram, Email, MinIO). Разработанная архитектура обеспечивает слабую связанность компонентов и позволяет в дальнейшем подключать новые каналы связи без изменения существующего кода.
+
+Разработана схема базы данных PostgreSQL, включающая семь таблиц для хранения информации о сообщениях, отправителях, клиентах, каналах клиентов, кураторах и истории назначений. При проектировании использованы внешние ключи, индексы и ограничения для обеспечения целостности данных.
+
+Особое внимание было уделено организации процесса разработки и развёртывания приложения. Для локальной разработки использована контейнеризация Docker и Docker Compose, включающая PostgreSQL 17, MinIO и серверное приложение. Настроены pre-commit хуки, линтеры (ruff) и система статической типизации (mypy). Реализовано тестовое покрытие ключевых сервисов, адаптеров и API-маршрутов с использованием pytest и pytest-asyncio.
+
+В результате прохождения практики были закреплены навыки проектирования архитектуры информационных систем, разработки серверных приложений на Python с использованием асинхронного веб-фреймворка Litestar, проектирования реляционных баз данных PostgreSQL, интеграции внешних API (Telegram Bot API, IMAP/SMTP), разработки клиентских приложений на React и организации развёртывания современных веб-приложений с помощью Docker.
+
+В перспективе система может быть расширена дополнительными каналами связи (SMS, VK), интеграцией с образовательной платформой GetCourse, а также дополнена функциональностью аналитики и отчётности.
+
+\newpage
+\appendix
+\chapter*{Приложение А \\ Исходный код проекта}
+\addcontentsline{toc}{chapter}{Приложение А. Исходный код проекта}
+
+Исходный код разработанного в ходе практики программного комплекса доступен в публичном репозитории на GitHub по адресу:
+
+\medskip
+\begin{center}
+\url{https://github.com/ProudRykar/PP-2026}
+\end{center}
+\medskip
+
+Структура репозитория включает следующие основные директории и файлы:
+
+\begin{itemize}
+    \item \texttt{app/}~---~серверная часть на Python с использованием фреймворка Litestar
+    \begin{itemize}
+        \item \texttt{core/}~---~доменная модель, бизнес-логика и порты (интерфейсы)
+        \item \texttt{api/}~---~REST-контроллеры, DTO-схемы, обработка исключений
+        \item \texttt{adapters/}~---~реализации адаптеров (Telegram, Email, PostgreSQL, MinIO)
+    \end{itemize}
+    \item \texttt{frontend/}~---~клиентское приложение на React 19 с TypeScript
+    \item \texttt{tests/}~---~модульные и интеграционные тесты (pytest, pytest-asyncio)
+    \item \texttt{docker-compose.yml}~---~конфигурация развёртывания (PostgreSQL, MinIO, приложение)
+    \item \texttt{pyproject.toml}~---~зависимости и настройки инструментов разработки
+\end{itemize}
+
+\end{document}

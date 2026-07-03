@@ -6,12 +6,12 @@ export default defineConfig({
   server: {
     host: "0.0.0.0",
     proxy: {
-      '/api': 'http://localhost:8000',
+      '/api': 'http://localhost:8044',
       '/ws': {
-        target: 'ws://localhost:8000',
+        target: 'ws://localhost:8044',
         ws: true,
       },
-      '/health': 'http://localhost:8000',
+      '/health': 'http://localhost:8044',
     },
   },
 })

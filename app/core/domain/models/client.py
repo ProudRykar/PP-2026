@@ -48,6 +48,7 @@ class Client:
             "last_interaction": self.last_interaction.isoformat()
             if self.last_interaction
             else None,
+            "curator_id": self.curator_id,
         }
 
     @staticmethod
@@ -77,4 +78,5 @@ class Client:
             metadata=data.get("metadata", {}),
             created_at=created_at or datetime.now(timezone.utc),
             last_interaction=last_interaction,
+            curator_id=data.get("curator_id"),
         )
