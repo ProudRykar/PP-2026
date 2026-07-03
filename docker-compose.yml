@@ -40,14 +40,19 @@ services:
       dockerfile: Dockerfile
     container_name: omnichannel-app
     restart: unless-stopped
-    network_mode: "host"
+    ports:
+      - "8046:8046"
     env_file:
       - .env
     environment:
-      MINIO_ENDPOINT: http://localhost:9000  # host‑networking: localhost, не minio
+      MINIO_ENDPOINT: http://minio:9000
+      DATABASE_HOST: postgres
+      DATABASE_PORT: 5432
     depends_on:
       postgres:
         condition: service_healthy
+      minio:
+        condition: service_started
 
 volumes:
   postgres_data:
