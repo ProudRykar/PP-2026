@@ -1,3 +1,4 @@
+import html
 import logging
 import asyncio
 import imaplib
@@ -7,6 +8,8 @@ import email
 import re
 from email.message import EmailMessage
 from email.header import decode_header
+from email.utils import formataddr, formatdate, make_msgid
+from email import policy
 from typing import AsyncGenerator
 from datetime import datetime
 
@@ -53,16 +56,24 @@ class EmailEngine(MessageEngine):
         return match.group(1) if match else address.strip()
 
     async def send_message(self, recipient: str, content: str, **kwargs) -> str:
-        subject = kwargs.get("subject", "")
+        subject = kwargs.get("subject") or "Без темы"
         to_addr = self._extract_email(recipient)
         logger.info("Sending email via SMTP to %s (subject: %s)", to_addr, subject)
 
         def _send() -> str:
-            msg = EmailMessage()
-            msg["From"] = self._user
+            msg = EmailMessage(policy=policy.SMTPUTF8)
+            msg["From"] = formataddr(("Поддержка GetCourse", self._user))
             msg["To"] = to_addr
             msg["Subject"] = subject
-            msg.set_content(content)
+            msg["Date"] = formatdate(localtime=True)
+            msg["Message-ID"] = make_msgid()
+            msg["Reply-To"] = self._user
+            msg["User-Agent"] = "Omnichannel Mailer 1.0"
+            msg.set_content(content, charset="utf-8")
+            msg.add_alternative(
+                f"""<html><body><p>{html.escape(content).replace(chr(10), "<br>")}</p></body></html>""",
+                subtype="html",
+            )
 
             try:
                 if self._smtp_port == 465:

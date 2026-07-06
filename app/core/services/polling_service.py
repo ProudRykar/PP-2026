@@ -31,7 +31,7 @@ class PollingOrchestrator(AbstractPollingService):
         for engine in self._engines:
             try:
                 await engine.start()
-                task = asyncio.create_task(self._poll_engine(engine))
+                task = asyncio.create_task(self._poll_supervisor(engine))
                 self._tasks.append(task)
                 logger.info(f"Polling started for {engine.channel_type}")
             except Exception as e:
@@ -70,8 +70,11 @@ class PollingOrchestrator(AbstractPollingService):
             except Exception as e:
                 logger.error(f"Error stopping engine {engine.channel_type}: {e}")
 
-        for task in self._tasks:
+        remaining = [t for t in self._tasks if not t.done()]
+        for task in remaining:
             task.cancel()
+        if remaining:
+            await asyncio.wait(remaining, timeout=5)
 
         self._tasks.clear()
         logger.info("Polling stopped")
@@ -103,45 +106,53 @@ class PollingOrchestrator(AbstractPollingService):
 
         return channel, external_id, name, username
 
-    async def _poll_engine(self, engine: MessageEngine) -> None:
-        try:
-            async for message in engine.get_incoming():
-                if message:
-                    try:
-                        channel, external_id, name, username = (
-                            self._extract_client_info(message)
-                        )
-                        avatar_url = (
-                            message.metadata.get("file_url")
-                            if channel == "telegram"
-                            and message.metadata.get("media_type") == "photo"
-                            else None
-                        )
-                        await self._client_service.get_or_create_client(
-                            channel=channel,
-                            external_id=external_id,
-                            name=name,
-                            avatar_url=avatar_url,
-                            username=username,
-                            display_name=name,
-                        )
-
-                        await self._message_service.save_message(message)
-                        await broadcast_message(
-                            {"type": "new_message", **message.to_dict()}
-                        )
-                        logger.debug(f"Message from {engine.channel_type} saved")
-                    except Exception as e:
-                        logger.error(
-                            f"Error saving message from {engine.channel_type}: {e}"
-                        )
-        except asyncio.CancelledError:
-            pass
-        except Exception as e:
-            logger.error(f"Error polling {engine.channel_type}: {e}")
-        finally:
+    async def _poll_supervisor(self, engine: MessageEngine) -> None:
+        while self._running and engine.is_running:
             try:
-                if engine.is_running:
-                    await engine.stop()
+                await self._poll_engine(engine)
+            except asyncio.CancelledError:
+                logger.info(f"Polling cancelled for {engine.channel_type}")
+                break
             except Exception as e:
-                logger.error(f"Error stopping {engine.channel_type}: {e}")
+                logger.error(
+                    f"Polling loop for {engine.channel_type} crashed: {e}",
+                    exc_info=True,
+                )
+
+            if self._running and engine.is_running:
+                logger.warning(
+                    f"Restarting polling for {engine.channel_type} in 5 seconds..."
+                )
+                await asyncio.sleep(5)
+
+    async def _poll_engine(self, engine: MessageEngine) -> None:
+        async for message in engine.get_incoming():
+            if message:
+                try:
+                    channel, external_id, name, username = self._extract_client_info(
+                        message
+                    )
+                    avatar_url = (
+                        message.metadata.get("file_url")
+                        if channel == "telegram"
+                        and message.metadata.get("media_type") == "photo"
+                        else None
+                    )
+                    await self._client_service.get_or_create_client(
+                        channel=channel,
+                        external_id=external_id,
+                        name=name,
+                        avatar_url=avatar_url,
+                        username=username,
+                        display_name=name,
+                    )
+
+                    await self._message_service.save_message(message)
+                    await broadcast_message(
+                        {"type": "new_message", **message.to_dict()}
+                    )
+                    logger.debug(f"Message from {engine.channel_type} saved")
+                except Exception as e:
+                    logger.error(
+                        f"Error saving message from {engine.channel_type}: {e}"
+                    )

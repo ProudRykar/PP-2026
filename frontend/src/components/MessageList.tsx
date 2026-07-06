@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react'
 import type { Message } from '../types'
 import { ChatGroup } from './ChatGroup'
 import { EmailCard } from './EmailCard'
+import { DateSeparator } from './DateSeparator'
 
 interface MessageListProps {
   messages: Message[]
@@ -36,6 +37,30 @@ function senderLabel(msg: Message, ownName?: string): string {
 
 function channelLabel(msg: Message): string {
   return msg.channel.charAt(0).toUpperCase() + msg.channel.slice(1)
+}
+
+function formatDate(date: Date): string {
+  return date.toLocaleDateString('ru-RU', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  })
+}
+
+function buildRenderItems(groups: Message[][]) {
+  const items: Array<{ type: 'group' | 'separator'; messages?: Message[]; date?: string; key: string }> = []
+  let prevDateKey = ''
+  for (let gi = 0; gi < groups.length; gi++) {
+    const g = groups[gi]
+    if (!g.length) continue
+    const dateKey = new Date(g[0].timestamp).toDateString()
+    if (!prevDateKey || dateKey !== prevDateKey) {
+      items.push({ type: 'separator', date: formatDate(new Date(g[0].timestamp)), key: `sep-${dateKey}` })
+    }
+    prevDateKey = dateKey
+    items.push({ type: 'group', messages: g, key: `group-${gi}` })
+  }
+  return items
 }
 
 function buildEmailThreads(messages: Message[]): Message[][] {
@@ -103,19 +128,23 @@ export function MessageList({ messages, loading, selectedId, onSelect, onReply, 
   const chatGroups = groupBySender(chatMessages)
   const emailThreads = buildEmailThreads(emailMessages)
 
+  const renderItems = buildRenderItems(chatGroups)
+
   return (
     <div className="flex flex-col pb-4">
-      {chatGroups.map((group, gi) => (
-        <ChatGroup
-          key={`chat-${group[0].sender_id}-${gi}`}
-          messages={group}
-          senderLabel={senderLabel(group[0], curatorName)}
-          channelLabel={channelLabel(group[0])}
-          selectedId={selectedId}
-          onSelect={onSelect}
-          onReply={onReply}
-        />
-      ))}
+      {renderItems.map(item =>
+        item.type === 'separator'
+          ? <DateSeparator key={item.key} date={item.date!} />
+          : <ChatGroup
+              key={item.key}
+              messages={item.messages!}
+              senderLabel={senderLabel(item.messages![0], curatorName)}
+              channelLabel={channelLabel(item.messages![0])}
+              selectedId={selectedId}
+              onSelect={onSelect}
+              onReply={onReply}
+            />
+      )}
       {emailThreads.length > 0 && (
         <div className="mx-2 my-2 space-y-2">
           {emailThreads.map((thread, ti) => (
